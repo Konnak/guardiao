@@ -106,11 +106,20 @@ def discord_callback(request):
         return redirect('home')
 
 
-@guardian_required
 def dashboard(request):
     """Dashboard do Guardião"""
     guardian_discord_id = request.session.get('guardian_id')
-    guardian = get_object_or_404(Guardian, discord_id=guardian_discord_id)
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Perfil de Guardião não encontrado. Faça login novamente.')
+        request.session.flush()
+        return redirect('discord_login')
     
     # Denúncias pendentes
     pending_reports = Report.objects.filter(status='pending').order_by('-created_at')[:10]
@@ -131,11 +140,21 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
-@guardian_required
 def report_detail(request, report_id):
     """Página de análise de denúncia"""
-    guardian_id = request.session.get('guardian_id')
-    guardian = get_object_or_404(Guardian, id=guardian_id)
+    guardian_discord_id = request.session.get('guardian_id')
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Perfil de Guardião não encontrado. Faça login novamente.')
+        request.session.flush()
+        return redirect('discord_login')
+    
     report = get_object_or_404(Report, id=report_id)
     
     # Verificar se o Guardião já votou nesta denúncia
@@ -164,11 +183,14 @@ class VoteView(View):
     """View para processar votos"""
     
     def post(self, request, report_id):
-        guardian_id = request.session.get('guardian_id')
-        if not guardian_id:
+        guardian_discord_id = request.session.get('guardian_id')
+        if not guardian_discord_id:
             return JsonResponse({'error': 'Não autenticado'}, status=401)
         
-        guardian = get_object_or_404(Guardian, id=guardian_id)
+        try:
+            guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+        except Guardian.DoesNotExist:
+            return JsonResponse({'error': 'Perfil de Guardião não encontrado'}, status=404)
         report = get_object_or_404(Report, id=report_id)
         
         # Verificar se já votou
@@ -221,11 +243,14 @@ class StatusToggleView(View):
     """View para alternar status do Guardião"""
     
     def post(self, request):
-        guardian_id = request.session.get('guardian_id')
-        if not guardian_id:
+        guardian_discord_id = request.session.get('guardian_id')
+        if not guardian_discord_id:
             return JsonResponse({'error': 'Não autenticado'}, status=401)
         
-        guardian = get_object_or_404(Guardian, id=guardian_id)
+        try:
+            guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+        except Guardian.DoesNotExist:
+            return JsonResponse({'error': 'Perfil de Guardião não encontrado'}, status=404)
         
         try:
             data = json.loads(request.body)

@@ -121,18 +121,37 @@ class BotAPIServer:
     
     async def start_server(self, host='0.0.0.0', port=8081):
         """Inicia o servidor HTTP"""
-        try:
-            runner = web.AppRunner(self.app)
-            await runner.setup()
-            site = web.TCPSite(runner, host, port)
-            await site.start()
-            
-            log_system_event("API_SERVER_STARTED", f"Servidor iniciado em {host}:{port}")
-            print(f"🌐 Servidor API do bot iniciado em {host}:{port}")
-            
-        except Exception as e:
-            log_error(f"Erro ao iniciar servidor API: {e}")
-            raise
+        import socket
+        
+        # Tentar encontrar uma porta disponível
+        for attempt in range(5):
+            try_port = port + attempt
+            try:
+                # Testar se a porta está disponível
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex((host, try_port))
+                sock.close()
+                
+                if result != 0:  # Porta disponível
+                    runner = web.AppRunner(self.app)
+                    await runner.setup()
+                    site = web.TCPSite(runner, host, try_port)
+                    await site.start()
+                    
+                    log_system_event("API_SERVER_STARTED", f"Servidor iniciado em {host}:{try_port}")
+                    print(f"🌐 Servidor API do bot iniciado em {host}:{try_port}")
+                    return
+                    
+            except Exception as e:
+                if attempt == 4:  # Última tentativa
+                    log_error(f"Erro ao iniciar servidor API após {attempt + 1} tentativas: {e}")
+                    raise
+                continue
+        
+        # Se chegou aqui, todas as tentativas falharam
+        log_error("Não foi possível encontrar uma porta disponível para o servidor API")
+        raise Exception("Não foi possível iniciar o servidor API")
 
 
 # Adicionar métodos ao bot principal

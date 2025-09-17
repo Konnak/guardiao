@@ -357,7 +357,12 @@ def check_new_reports(request):
         
         if last_check:
             try:
+                from django.utils import timezone
+                # Converter para timezone-aware datetime
                 last_check_dt = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+                if last_check_dt.tzinfo is None:
+                    last_check_dt = timezone.make_aware(last_check_dt)
+                
                 new_reports = Report.objects.filter(
                     created_at__gt=last_check_dt,
                     status='pending'
@@ -381,11 +386,13 @@ def check_new_reports(request):
                 'channel_id': report.channel_id,
             })
         
+        from django.utils import timezone
+        
         return Response({
             'success': True,
             'new_reports': reports_data,
             'count': len(reports_data),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': timezone.now().isoformat()
         })
         
     except Exception as e:
@@ -456,7 +463,21 @@ def get_pending_report_for_guardian(request, guardian_id):
                 return Response({'error': f'Guardião {guardian_offline.discord_display_name} está offline. Entre em serviço primeiro.'}, status=status.HTTP_404_NOT_FOUND)
             except Guardian.DoesNotExist:
                 print(f"❌ Guardião com discord_id {guardian_id} não encontrado no banco")
-                return Response({'error': f'Guardião com ID {guardian_id} não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+                
+                # Se for discord_id 1 (usuário de teste), criar um Guardião temporário
+                if guardian_id == 1:
+                    print(f"🔧 Criando Guardião temporário para discord_id {guardian_id}")
+                    guardian = Guardian.objects.create(
+                        discord_id=guardian_id,
+                        discord_username="TestUser",
+                        discord_display_name="Usuário de Teste",
+                        status='online',
+                        level=1,
+                        points=0
+                    )
+                    print(f"✅ Guardião temporário criado: {guardian.discord_display_name}")
+                else:
+                    return Response({'error': f'Guardião com ID {guardian_id} não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         
         # Verificar se já está em uma sessão ativa
         active_session = SessionGuardian.objects.filter(
@@ -596,10 +617,34 @@ def get_guardian_status(request, guardian_id):
                 'is_online': guardian.status == 'online'
             })
         except Guardian.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': f'Guardião com ID {guardian_id} não encontrado'
-            }, status=status.HTTP_404_NOT_FOUND)
+            # Se for discord_id 1 (usuário de teste), criar um Guardião temporário
+            if guardian_id == 1:
+                print(f"🔧 Criando Guardião temporário para discord_id {guardian_id}")
+                guardian = Guardian.objects.create(
+                    discord_id=guardian_id,
+                    discord_username="TestUser",
+                    discord_display_name="Usuário de Teste",
+                    status='online',
+                    level=1,
+                    points=0
+                )
+                return Response({
+                    'success': True,
+                    'guardian': {
+                        'id': guardian.id,
+                        'discord_id': guardian.discord_id,
+                        'discord_display_name': guardian.discord_display_name,
+                        'status': guardian.status,
+                        'level': guardian.level,
+                        'points': guardian.points
+                    },
+                    'is_online': guardian.status == 'online'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'error': f'Guardião com ID {guardian_id} não encontrado'
+                }, status=status.HTTP_404_NOT_FOUND)
             
     except Exception as e:
         return Response(

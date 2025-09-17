@@ -74,15 +74,39 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 SITE_URL=http://localhost:8080
 ```
 
-### 4. Execute as migrações
+### 4. Configuração Automática (Recomendado)
+
+Execute o script de configuração automática:
 
 ```bash
-python manage.py migrate
+python setup_system.py
 ```
 
-### 5. Crie um superusuário (opcional)
+Este script irá:
+- ✅ Verificar configurações do ambiente
+- ✅ Executar migrações do banco de dados
+- ✅ Coletar arquivos estáticos
+- ✅ Inicializar dados de teste
+- ✅ Verificar saúde do sistema
+
+### 5. Configuração Manual (Alternativa)
+
+Se preferir configurar manualmente:
 
 ```bash
+# Execute as migrações
+python manage.py migrate
+
+# Colete arquivos estáticos
+python manage.py collectstatic --noinput
+
+# Inicialize dados de teste
+python manage.py init_test_data
+
+# Verifique a saúde do sistema
+python manage.py system_health
+
+# Crie um superusuário (opcional)
 python manage.py createsuperuser
 ```
 
@@ -179,6 +203,54 @@ guardiao/
 ## 📝 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 🐛 Correção de Bugs
+
+### Bugs Corrigidos na Última Atualização
+
+#### 1. Conflito de Porta 8081
+- **Problema**: Servidor API do bot tentando usar porta já em uso
+- **Solução**: Implementado sistema de detecção automática de portas disponíveis
+- **Arquivo**: `bot/api_server.py`
+
+#### 2. Warning de Timezone
+- **Problema**: DateTimeField recebendo datetime naive quando timezone support está ativo
+- **Solução**: Conversão automática para timezone-aware datetime
+- **Arquivo**: `core/api_views.py`
+
+#### 3. Guardião não encontrado (discord_id 1)
+- **Problema**: Erro 404 para Guardião com discord_id 1
+- **Solução**: Criação automática de Guardião temporário para usuários de teste
+- **Arquivo**: `core/api_views.py`
+
+#### 4. Dashboard 404
+- **Problema**: Rota /dashboard/ retornando 404
+- **Solução**: Melhor tratamento de autenticação e redirecionamento
+- **Arquivo**: `core/views.py`
+
+### Comandos de Diagnóstico
+
+```bash
+# Verificar saúde do sistema
+python manage.py system_health
+
+# Inicializar dados de teste
+python manage.py init_test_data
+
+# Recriar dados de teste (força)
+python manage.py init_test_data --force
+
+# Verificar logs do sistema
+tail -f logs/guardiao.log
+```
+
+### Logs e Monitoramento
+
+O sistema agora inclui:
+- ✅ Logging estruturado em `logs/guardiao.log`
+- ✅ Handler de erro customizado para APIs
+- ✅ Verificação automática de integridade do banco
+- ✅ Detecção de problemas potenciais
 
 ## 📞 Suporte
 
