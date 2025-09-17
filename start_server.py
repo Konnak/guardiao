@@ -35,16 +35,16 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-    # Coletar arquivos estáticos
-    try:
-        print("📁 Coletando arquivos estáticos...")
-        execute_from_command_line(['start_server.py', 'collectstatic', '--clear', '--noinput', '--verbosity=2'])
-        print("✅ Arquivos estáticos coletados com sucesso")
-    except Exception as e:
-        print(f"❌ Erro ao coletar arquivos estáticos: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+# Coletar arquivos estáticos
+try:
+    print("📁 Coletando arquivos estáticos...")
+    execute_from_command_line(['start_server.py', 'collectstatic', '--clear', '--noinput', '--verbosity=2'])
+    print("✅ Arquivos estáticos coletados com sucesso")
+except Exception as e:
+    print(f"❌ Erro ao coletar arquivos estáticos: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 
 # Executar servidor Django
 try:
