@@ -1,0 +1,454 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Lista de Denúncias - Sistema Guardião{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header da Lista -->
+    <div class="reports-header">
+        <div class="reports-title">
+            <h1>
+                <i class="fas fa-clipboard-list"></i>
+                Lista de Denúncias
+            </h1>
+            <p class="reports-description">
+                Visualize todas as denúncias do sistema
+            </p>
+        </div>
+        
+        <div class="reports-filters">
+            <div class="filter-group">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="pending">Pendente</option>
+                    <option value="voting">Em Votação</option>
+                    <option value="completed">Concluída</option>
+                    <option value="closed">Fechada</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="punishment-filter">Punição:</label>
+                <select id="punishment-filter" class="filter-select">
+                    <option value="">Todas</option>
+                    <option value="none">Nenhuma</option>
+                    <option value="mute_1h">Mute 1h</option>
+                    <option value="mute_12h">Mute 12h</option>
+                    <option value="ban_24h">Ban 24h</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Denúncias -->
+    <div class="reports-list">
+        {% for report in page_obj %}
+            <div class="report-item" data-status="{{ report.status }}" data-punishment="{{ report.punishment }}">
+                <div class="report-header">
+                    <div class="report-id">
+                        <i class="fas fa-hashtag"></i>
+                        #{{ report.id }}
+                    </div>
+                    <div class="report-status status-{{ report.status }}">
+                        {{ report.get_status_display }}
+                    </div>
+                </div>
+                
+                <div class="report-content">
+                    <div class="report-info">
+                        <div class="info-item">
+                            <label>Usuário Denunciado:</label>
+                            <span>{{ report.reported_user_id }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Denunciante:</label>
+                            <span>{{ report.reporter_user_id }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Motivo:</label>
+                            <span>{{ report.reason|default:"Não especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data:</label>
+                            <span>{{ report.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="report-votes">
+                        <div class="votes-summary">
+                            <div class="vote-count improcedente">
+                                <i class="fas fa-check-circle"></i>
+                                {{ report.votes_improcedente }}
+                            </div>
+                            <div class="vote-count intimidou">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                {{ report.votes_intimidou }}
+                            </div>
+                            <div class="vote-count grave">
+                                <i class="fas fa-ban"></i>
+                                {{ report.votes_grave }}
+                            </div>
+                        </div>
+                        <div class="votes-total">
+                            {{ report.total_votes }}/5 votos
+                        </div>
+                    </div>
+                    
+                    {% if report.punishment != 'none' %}
+                        <div class="report-punishment">
+                            <i class="fas fa-gavel"></i>
+                            <span>{{ report.get_punishment_display }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="report-actions">
+                    <a href="{% url 'report_detail' report.id %}" class="btn btn-primary">
+                        <i class="fas fa-eye"></i>
+                        Ver Detalhes
+                    </a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <i class="fas fa-clipboard-check"></i>
+                <h3>Nenhuma denúncia encontrada</h3>
+                <p>Não há denúncias que correspondam aos filtros selecionados.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginação -->
+    {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            <div class="pagination-info">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                ({{ page_obj.paginator.count }} denúncias)
+            </div>
+            
+            <div class="pagination-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="pagination-link">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="pagination-link">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="pagination-link active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}" class="pagination-link">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="pagination-link">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="pagination-link">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.reports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.reports-title h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.reports-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.reports-filters {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--tertiary-bg);
+    border-radius: var(--border-radius);
+    background-color: var(--tertiary-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.report-item {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease;
+}
+
+.report-item:hover {
+    transform: translateY(-2px);
+}
+
+.report-item .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.report-id {
+    font-weight: 700;
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.report-content {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.report-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.info-item label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.report-votes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.votes-summary {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.vote-count {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.vote-count.improcedente {
+    background-color: rgba(57, 211, 83, 0.1);
+    color: var(--vote-improcedente);
+}
+
+.vote-count.intimidou {
+    background-color: rgba(210, 153, 34, 0.1);
+    color: var(--vote-intimidou);
+}
+
+.vote-count.grave {
+    background-color: rgba(218, 54, 51, 0.1);
+    color: var(--vote-grave);
+}
+
+.votes-total {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.report-punishment {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(218, 54, 51, 0.1);
+    border-radius: var(--border-radius);
+    color: var(--accent-danger);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.report-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.pagination-info {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.pagination-links {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.pagination-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius);
+    background-color: var(--tertiary-bg);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pagination-link:hover {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.pagination-link.active {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .reports-header {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+    }
+    
+    .reports-filters {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .report-content {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .report-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .pagination {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const statusFilter = document.getElementById('status-filter');
+    const punishmentFilter = document.getElementById('punishment-filter');
+    const reportItems = document.querySelectorAll('.report-item');
+    
+    function filterReports() {
+        const statusValue = statusFilter.value;
+        const punishmentValue = punishmentFilter.value;
+        
+        reportItems.forEach(item => {
+            const itemStatus = item.dataset.status;
+            const itemPunishment = item.dataset.punishment;
+            
+            let showItem = true;
+            
+            if (statusValue && itemStatus !== statusValue) {
+                showItem = false;
+            }
+            
+            if (punishmentValue && itemPunishment !== punishmentValue) {
+                showItem = false;
+            }
+            
+            item.style.display = showItem ? 'block' : 'none';
+        });
+    }
+    
+    statusFilter.addEventListener('change', filterReports);
+    punishmentFilter.addEventListener('change', filterReports);
+});
+</script>
+{% endblock %}

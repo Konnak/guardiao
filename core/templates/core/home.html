@@ -1,0 +1,173 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Sistema Guardião - Início{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    Sistema de Moderação
+                    <span class="highlight">Inteligente</span>
+                </h1>
+                <p class="hero-description">
+                    Uma plataforma completa de moderação para servidores Discord, 
+                    inspirada no sistema de Guardiões do Habbo Hotel. 
+                    Análise colaborativa, votação transparente e punições justas.
+                </p>
+                <div class="hero-actions">
+                    {% if request.session.guardian_id %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Ir para Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'discord_login' %}" class="btn btn-primary">
+                            <i class="fab fa-discord"></i>
+                            Entrar como Guardião
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'reports_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-clipboard-list"></i>
+                        Ver Denúncias
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Proteção</h3>
+                    <p>Mantenha seu servidor seguro</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-number">{{ total_reports }}</h3>
+                    <p class="stat-label">Denúncias Processadas</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-number">{{ total_guardians }}</h3>
+                    <p class="stat-label">Guardiões Cadastrados</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-circle online"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-number">{{ online_guardians }}</h3>
+                    <p class="stat-label">Guardiões Online</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-number">{{ pending_reports }}</h3>
+                    <p class="stat-label">Denúncias Pendentes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Como Funciona</h2>
+            <p class="section-description">
+                Um sistema transparente e colaborativo de moderação
+            </p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="feature-title">1. Denúncia</h3>
+                <p class="feature-description">
+                    Usuários reportam violações usando o comando /report no Discord. 
+                    O sistema coleta automaticamente o contexto da conversa.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <h3 class="feature-title">2. Análise</h3>
+                <p class="feature-description">
+                    Guardiões analisam as denúncias de forma anônima e transparente, 
+                    votando em Improcedente, Intimidou ou Grave.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <h3 class="feature-title">3. Decisão</h3>
+                <p class="feature-description">
+                    Após 5 votos, o sistema calcula automaticamente a punição 
+                    baseada em regras predefinidas e aplica a ação.
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h3 class="feature-title">4. Apelação</h3>
+                <p class="feature-description">
+                    Usuários punidos podem solicitar apelação, que será analisada 
+                    por um novo grupo de Guardiões.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta">
+    <div class="container">
+        <div class="cta-content">
+            <h2 class="cta-title">Pronto para se tornar um Guardião?</h2>
+            <p class="cta-description">
+                Junte-se à nossa comunidade de moderadores e ajude a manter 
+                os servidores Discord seguros e acolhedores.
+            </p>
+            {% if not request.session.guardian_id %}
+                <a href="{% url 'discord_login' %}" class="btn btn-primary btn-large">
+                    <i class="fab fa-discord"></i>
+                    Entrar com Discord
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

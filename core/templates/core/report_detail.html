@@ -1,0 +1,275 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Análise de Denúncia #{{ report.id }} - Sistema Guardião{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header da Denúncia -->
+    <div class="report-header">
+        <div class="report-info">
+            <h1 class="report-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Denúncia #{{ report.id }}
+            </h1>
+            <div class="report-meta">
+                <span class="report-status status-{{ report.status }}">
+                    {{ report.get_status_display }}
+                </span>
+                <span class="report-date">
+                    <i class="fas fa-calendar"></i>
+                    {{ report.created_at|date:"d/m/Y H:i" }}
+                </span>
+                <span class="report-votes">
+                    <i class="fas fa-vote-yea"></i>
+                    {{ report.total_votes }}/5 votos
+                </span>
+            </div>
+        </div>
+        
+        <div class="report-actions">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Informações da Denúncia -->
+    <div class="report-details">
+        <div class="detail-card">
+            <h3 class="detail-title">
+                <i class="fas fa-info-circle"></i>
+                Informações
+            </h3>
+            <div class="detail-content">
+                <div class="detail-item">
+                    <label>Motivo:</label>
+                    <span>{{ report.reason|default:"Não especificado" }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Servidor:</label>
+                    <span>{{ report.guild_id }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Canal:</label>
+                    <span>{{ report.channel_id }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Usuário Denunciado:</label>
+                    <span>{{ report.reported_user_id }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Denunciante:</label>
+                    <span>{{ report.reporter_user_id }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-card">
+            <h3 class="detail-title">
+                <i class="fas fa-chart-bar"></i>
+                Votos Atuais
+            </h3>
+            <div class="votes-summary">
+                <div class="vote-item improcedente">
+                    <span class="vote-label">Improcedente</span>
+                    <span class="vote-count">{{ report.votes_improcedente }}</span>
+                </div>
+                <div class="vote-item intimidou">
+                    <span class="vote-label">Intimidou</span>
+                    <span class="vote-count">{{ report.votes_intimidou }}</span>
+                </div>
+                <div class="vote-item grave">
+                    <span class="vote-label">Grave</span>
+                    <span class="vote-count">{{ report.votes_grave }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Anonimizado -->
+    <div class="chat-section">
+        <h2 class="section-title">
+            <i class="fas fa-comments"></i>
+            Contexto da Conversa
+        </h2>
+        <div class="chat-container">
+            {% for message in messages %}
+                <div class="message {% if message.is_reported_user %}reported-user{% endif %}">
+                    <div class="message-header">
+                        <span class="message-author">{{ message.anonymized_username }}</span>
+                        <span class="message-time">{{ message.timestamp|date:"H:i" }}</span>
+                    </div>
+                    <div class="message-content">
+                        {{ message.content }}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-comment-slash"></i>
+                    <h3>Nenhuma mensagem encontrada</h3>
+                    <p>O contexto da conversa não está disponível.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Seção de Votação -->
+    {% if not has_voted and report.status != 'completed' %}
+        <div class="voting-section">
+            <h2 class="section-title">
+                <i class="fas fa-vote-yea"></i>
+                Sua Votação
+            </h2>
+            
+            <div class="voting-card">
+                <div class="voting-instructions">
+                    <p>Analise cuidadosamente o contexto da conversa e vote na opção que melhor se aplica:</p>
+                </div>
+                
+                <form id="voteForm" class="voting-form">
+                    {% csrf_token %}
+                    <div class="vote-options">
+                        <div class="vote-option">
+                            <input type="radio" name="vote_type" value="improcedente" id="vote_improcedente">
+                            <label for="vote_improcedente" class="vote-label improcedente">
+                                <div class="vote-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="vote-content">
+                                    <h3>Improcedente</h3>
+                                    <p>O ato não viola as regras do servidor</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="vote-option">
+                            <input type="radio" name="vote_type" value="intimidou" id="vote_intimidou">
+                            <label for="vote_intimidou" class="vote-label intimidou">
+                                <div class="vote-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="vote-content">
+                                    <h3>Intimidou</h3>
+                                    <p>Violação leve (insulto, duplo sentido)</p>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="vote-option">
+                            <input type="radio" name="vote_type" value="grave" id="vote_grave">
+                            <label for="vote_grave" class="vote-label grave">
+                                <div class="vote-icon">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="vote-content">
+                                    <h3>Grave</h3>
+                                    <p>Violação grave (discriminação, crime, discurso de ódio)</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="voting-actions">
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <i class="fas fa-vote-yea"></i>
+                            Confirmar Voto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% elif has_voted %}
+        <div class="voted-section">
+            <div class="voted-card">
+                <i class="fas fa-check-circle"></i>
+                <h3>Voto Registrado</h3>
+                <p>Você já votou nesta denúncia. Aguarde o resultado final.</p>
+            </div>
+        </div>
+    {% elif report.status == 'completed' %}
+        <div class="completed-section">
+            <div class="completed-card">
+                <i class="fas fa-gavel"></i>
+                <h3>Denúncia Concluída</h3>
+                <p>Esta denúncia foi concluída com {{ report.total_votes }} votos.</p>
+                {% if report.punishment != 'none' %}
+                    <div class="punishment-info">
+                        <strong>Punição aplicada:</strong> {{ report.get_punishment_display }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Histórico de Votos -->
+    {% if votes %}
+        <div class="votes-history">
+            <h2 class="section-title">
+                <i class="fas fa-history"></i>
+                Histórico de Votos
+            </h2>
+            <div class="votes-list">
+                {% for vote in votes %}
+                    <div class="vote-item">
+                        <div class="vote-info">
+                            <span class="vote-author">Guardião</span>
+                            <span class="vote-type {{ vote.vote_type }}">
+                                {{ vote.get_vote_type_display }}
+                            </span>
+                        </div>
+                        <span class="vote-time">{{ vote.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('voteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const voteType = formData.get('vote_type');
+    
+    if (!voteType) {
+        alert('Por favor, selecione uma opção de voto.');
+        return;
+    }
+    
+    // Confirmar voto
+    if (!confirm('Tem certeza de que deseja votar "' + voteType + '"? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    // Enviar voto
+    fetch('/api/vote/{{ report.id }}/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            vote_type: voteType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Voto registrado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro ao registrar voto: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao registrar voto');
+    });
+});
+</script>
+{% endblock %}

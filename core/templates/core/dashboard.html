@@ -1,0 +1,243 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Sistema Guardião{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header do Dashboard -->
+    <div class="dashboard-header">
+        <div class="dashboard-welcome">
+            <div class="welcome-avatar">
+                {% if guardian.avatar_url %}
+                    <img src="{{ guardian.avatar_url }}" alt="{{ guardian.discord_display_name }}">
+                {% else %}
+                    <i class="fas fa-user"></i>
+                {% endif %}
+            </div>
+            <div class="welcome-text">
+                <h1>Bem-vindo, {{ guardian.discord_display_name }}!</h1>
+                <p class="guardian-level">Nível {{ guardian.level }} - {{ guardian.get_level_display }}</p>
+            </div>
+        </div>
+        
+        <div class="status-toggle">
+            <div class="status-indicator {{ guardian.status }}">
+                <i class="fas fa-circle"></i>
+                <span>{{ guardian.get_status_display }}</span>
+            </div>
+            <button class="btn btn-toggle" onclick="toggleStatus()">
+                <i class="fas fa-power-off"></i>
+                Alternar Status
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.points }}</h3>
+                <p class="stat-label">Pontos</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.correct_votes }}</h3>
+                <p class="stat-label">Votos Corretos</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.incorrect_votes }}</h3>
+                <p class="stat-label">Votos Incorretos</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.accuracy_percentage }}%</h3>
+                <p class="stat-label">Precisão</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.total_service_hours|floatformat:1 }}</h3>
+                <p class="stat-label">Horas de Serviço</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ guardian.last_activity|date:"d/m" }}</h3>
+                <p class="stat-label">Última Atividade</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Denúncias Pendentes -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Denúncias Pendentes
+            </h2>
+            <a href="{% url 'reports_list' %}" class="btn btn-secondary">
+                Ver Todas
+            </a>
+        </div>
+        
+        {% if pending_reports %}
+            <div class="reports-grid">
+                {% for report in pending_reports %}
+                    <div class="report-card">
+                        <div class="report-header">
+                            <div class="report-id">#{{ report.id }}</div>
+                            <div class="report-status status-{{ report.status }}">
+                                {{ report.get_status_display }}
+                            </div>
+                        </div>
+                        <div class="report-content">
+                            <p class="report-reason">
+                                <strong>Motivo:</strong> {{ report.reason|truncatechars:100 }}
+                            </p>
+                            <div class="report-meta">
+                                <span class="report-date">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ report.created_at|date:"d/m/Y H:i" }}
+                                </span>
+                                <span class="report-votes">
+                                    <i class="fas fa-vote-yea"></i>
+                                    {{ report.total_votes }}/5 votos
+                                </span>
+                            </div>
+                        </div>
+                        <div class="report-actions">
+                            <a href="{% url 'report_detail' report.id %}" class="btn btn-primary">
+                                <i class="fas fa-eye"></i>
+                                Analisar
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-clipboard-check"></i>
+                <h3>Nenhuma denúncia pendente</h3>
+                <p>Todas as denúncias foram processadas!</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Denúncias em Votação -->
+    <div class="dashboard-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-vote-yea"></i>
+                Denúncias em Votação
+            </h2>
+        </div>
+        
+        {% if voting_reports %}
+            <div class="reports-grid">
+                {% for report in voting_reports %}
+                    <div class="report-card">
+                        <div class="report-header">
+                            <div class="report-id">#{{ report.id }}</div>
+                            <div class="report-status status-{{ report.status }}">
+                                {{ report.get_status_display }}
+                            </div>
+                        </div>
+                        <div class="report-content">
+                            <p class="report-reason">
+                                <strong>Motivo:</strong> {{ report.reason|truncatechars:100 }}
+                            </p>
+                            <div class="report-meta">
+                                <span class="report-date">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ report.created_at|date:"d/m/Y H:i" }}
+                                </span>
+                                <span class="report-votes">
+                                    <i class="fas fa-vote-yea"></i>
+                                    {{ report.total_votes }}/5 votos
+                                </span>
+                            </div>
+                            <div class="vote-summary">
+                                <span class="vote-count improcedente">{{ report.votes_improcedente }} Imp</span>
+                                <span class="vote-count intimidou">{{ report.votes_intimidou }} Int</span>
+                                <span class="vote-count grave">{{ report.votes_grave }} Grav</span>
+                            </div>
+                        </div>
+                        <div class="report-actions">
+                            <a href="{% url 'report_detail' report.id %}" class="btn btn-primary">
+                                <i class="fas fa-vote-yea"></i>
+                                Votar
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-vote-yea"></i>
+                <h3>Nenhuma denúncia em votação</h3>
+                <p>Você já votou em todas as denúncias disponíveis!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleStatus() {
+    const currentStatus = '{{ guardian.status }}';
+    const newStatus = currentStatus === 'online' ? 'offline' : 'online';
+    
+    fetch('/api/status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao alterar status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao alterar status');
+    });
+}
+</script>
+{% endblock %}
