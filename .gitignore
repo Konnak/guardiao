@@ -178,3 +178,4 @@ staticfiles/
 
 # Discloud specific
 discloud.log
+discloud.env
