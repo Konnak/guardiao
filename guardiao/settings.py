@@ -98,16 +98,40 @@ print(f"DB_HOST: {os.getenv('DB_HOST', 'postgresql')}")
 print(f"DB_PORT: {os.getenv('DB_PORT', '5432')}")
 print("=====================================")
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv('DB_NAME', 'guardiaodatabase'),
-        "USER": os.getenv('DB_USER', 'guardiao'),
-        "PASSWORD": os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
-        "HOST": os.getenv('DB_HOST', 'postgresql'),
-        "PORT": os.getenv('DB_PORT', '5432'),
+# Try to connect to PostgreSQL, fallback to SQLite if not available
+try:
+    import psycopg2
+    # Test connection
+    conn = psycopg2.connect(
+        host=os.getenv('DB_HOST', 'postgresql'),
+        port=os.getenv('DB_PORT', '5432'),
+        user=os.getenv('DB_USER', 'guardiao'),
+        password=os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
+        database=os.getenv('DB_NAME', 'guardiaodatabase')
+    )
+    conn.close()
+    print("✅ PostgreSQL connection successful!")
+    
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv('DB_NAME', 'guardiaodatabase'),
+            "USER": os.getenv('DB_USER', 'guardiao'),
+            "PASSWORD": os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
+            "HOST": os.getenv('DB_HOST', 'postgresql'),
+            "PORT": os.getenv('DB_PORT', '5432'),
+        }
     }
-}
+except Exception as e:
+    print(f"❌ PostgreSQL connection failed: {e}")
+    print("🔄 Falling back to SQLite for development...")
+    
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
