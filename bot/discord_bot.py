@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import json
 import requests
 from typing import Dict, List, Optional
+from bot.logging_config import setup_logging, log_report_created, log_vote_cast, log_punishment_applied, log_guardian_status_change, log_error, log_system_event
 
 # Configurar Django
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -100,12 +101,17 @@ class GuardiaoBot(commands.Bot):
         print(f"🤖 Bot conectado como {self.user}")
         print(f"📊 Conectado em {len(self.guilds)} servidores")
         
+        # Log do evento
+        log_system_event("BOT_STARTED", f"Conectado como {self.user}, Servidores: {len(self.guilds)}")
+        
         # Sincronizar comandos slash
         try:
             synced = await self.tree.sync()
             print(f"✅ {len(synced)} comandos slash sincronizados")
+            log_system_event("COMMANDS_SYNCED", f"{len(synced)} comandos sincronizados")
         except Exception as e:
             print(f"❌ Erro ao sincronizar comandos: {e}")
+            log_error(f"Erro ao sincronizar comandos: {e}")
     
     async def on_message(self, message):
         """Evento executado quando uma mensagem é enviada"""
@@ -172,41 +178,98 @@ class GuardiaoBot(commands.Bot):
             guild = self.get_guild(report.guild_id)
             if not guild:
                 print(f"❌ Servidor {report.guild_id} não encontrado")
-                return
+                return False
             
             user = guild.get_member(report.reported_user_id)
             if not user:
                 print(f"❌ Usuário {report.reported_user_id} não encontrado no servidor")
-                return
+                return False
             
             punishment = report.punishment
+            success = False
             
             if punishment == 'mute_1h':
-                # Implementar mute de 1 hora
-                await self._apply_mute(user, 3600, "Denúncia aprovada - Mute de 1 hora")
+                success = await self._apply_mute(user, 3600, "Denúncia aprovada - Mute de 1 hora")
             elif punishment == 'mute_12h':
-                # Implementar mute de 12 horas
-                await self._apply_mute(user, 43200, "Denúncia aprovada - Mute de 12 horas")
+                success = await self._apply_mute(user, 43200, "Denúncia aprovada - Mute de 12 horas")
             elif punishment == 'ban_24h':
-                # Implementar banimento de 24 horas
-                await self._apply_temp_ban(user, 86400, "Denúncia aprovada - Banimento de 24 horas")
+                success = await self._apply_temp_ban(user, 86400, "Denúncia aprovada - Banimento de 24 horas")
             
             # Notificar administradores para punições graves
-            if punishment in ['ban_24h']:
+            if punishment in ['ban_24h'] and success:
                 await self._notify_admins(guild, report, punishment)
+            
+            return success
                 
         except Exception as e:
             print(f"❌ Erro ao aplicar punição: {e}")
+            return False
     
     async def _apply_mute(self, user: discord.Member, duration: int, reason: str):
         """Aplica mute temporário"""
-        # Implementar lógica de mute aqui
-        print(f"🔇 Mute aplicado para {user.display_name}: {reason}")
+        try:
+            # Verificar se o bot tem permissão para mutar
+            if not user.guild.me.guild_permissions.mute_members:
+                print(f"❌ Bot não tem permissão para mutar no servidor {user.guild.name}")
+                return False
+            
+            # Aplicar timeout (mute temporário)
+            await user.timeout(discord.utils.timedelta(seconds=duration), reason=reason)
+            print(f"🔇 Mute aplicado para {user.display_name}: {reason}")
+            
+            # Enviar DM para o usuário
+            try:
+                embed = discord.Embed(
+                    title="🔇 Você foi mutado",
+                    description=f"Você foi mutado por {duration//3600} hora(s) devido a uma denúncia aprovada.",
+                    color=0xff6b6b,
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Motivo", value=reason, inline=False)
+                embed.add_field(name="Duração", value=f"{duration//3600} hora(s)", inline=True)
+                await user.send(embed=embed)
+            except:
+                pass  # Usuário pode ter DMs desabilitadas
+            
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao aplicar mute: {e}")
+            return False
     
     async def _apply_temp_ban(self, user: discord.Member, duration: int, reason: str):
         """Aplica banimento temporário"""
-        # Implementar lógica de ban temporário aqui
-        print(f"🔨 Ban aplicado para {user.display_name}: {reason}")
+        try:
+            # Verificar se o bot tem permissão para banir
+            if not user.guild.me.guild_permissions.ban_members:
+                print(f"❌ Bot não tem permissão para banir no servidor {user.guild.name}")
+                return False
+            
+            # Enviar DM antes do ban
+            try:
+                embed = discord.Embed(
+                    title="🔨 Você foi banido",
+                    description=f"Você foi banido por {duration//3600} hora(s) devido a uma denúncia grave aprovada.",
+                    color=0xff4757,
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Motivo", value=reason, inline=False)
+                embed.add_field(name="Duração", value=f"{duration//3600} hora(s)", inline=True)
+                embed.add_field(name="Apelação", value="Você pode solicitar uma apelação através do site do Sistema Guardião.", inline=False)
+                await user.send(embed=embed)
+            except:
+                pass  # Usuário pode ter DMs desabilitadas
+            
+            # Aplicar ban
+            await user.ban(reason=reason)
+            print(f"🔨 Ban aplicado para {user.display_name}: {reason}")
+            
+            # TODO: Implementar sistema de unban automático após o tempo
+            # Por enquanto, o ban é permanente até ser removido manualmente
+            
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao aplicar ban: {e}")
+            return False
     
     async def _notify_admins(self, guild: discord.Guild, report: Report, punishment: str):
         """Notifica administradores sobre punições graves"""
@@ -261,6 +324,9 @@ async def report_command(
             reason=motivo,
             status='pending'
         )
+        
+        # Log da criação da denúncia
+        log_report_created(report.id, interaction.user.id, usuario.id, interaction.guild.id)
         
         # Anonimizar e salvar mensagens
         user_mapping = {}
@@ -333,8 +399,12 @@ async def status_command(
             guardian.status = 'offline'
             status_display = "Fora de Serviço"
         
+        old_status = guardian.status
         guardian.last_activity = datetime.now()
         guardian.save()
+        
+        # Log da mudança de status
+        log_guardian_status_change(guardian.id, old_status, guardian.status)
         
         embed = discord.Embed(
             title="📊 Status Atualizado",
@@ -354,17 +424,115 @@ async def status_command(
         await interaction.followup.send("❌ Ocorreu um erro ao atualizar seu status.", ephemeral=True)
 
 
+@bot.tree.command(name="info", description="Mostra informações sobre o Sistema Guardião")
+async def info_command(interaction: discord.Interaction):
+    """Comando para mostrar informações sobre o sistema"""
+    await interaction.response.defer(ephemeral=True)
+    
+    try:
+        # Estatísticas do sistema
+        total_reports = Report.objects.count()
+        total_guardians = Guardian.objects.count()
+        online_guardians = Guardian.objects.filter(status='online').count()
+        pending_reports = Report.objects.filter(status='pending').count()
+        
+        embed = discord.Embed(
+            title="🛡️ Sistema Guardião",
+            description="Uma plataforma completa de moderação para servidores Discord",
+            color=0x58A6FF,
+            timestamp=datetime.now()
+        )
+        
+        embed.add_field(
+            name="📊 Estatísticas",
+            value=f"**Denúncias:** {total_reports}\n**Guardiões:** {total_guardians}\n**Online:** {online_guardians}\n**Pendentes:** {pending_reports}",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🔧 Comandos",
+            value="`/report` - Reportar usuário\n`/status` - Alterar status\n`/info` - Informações\n`/help` - Ajuda",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🌐 Links",
+            value=f"[Site]({bot.site_url})\n[Suporte]({bot.site_url}/support)\n[Documentação]({bot.site_url}/docs)",
+            inline=True
+        )
+        
+        embed.set_footer(text="Sistema Guardião - Mantendo servidores seguros")
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        
+    except Exception as e:
+        print(f"❌ Erro no comando info: {e}")
+        await interaction.followup.send("❌ Ocorreu um erro ao obter informações.", ephemeral=True)
+
+
+@bot.tree.command(name="help", description="Mostra ajuda sobre como usar o Sistema Guardião")
+async def help_command(interaction: discord.Interaction):
+    """Comando de ajuda"""
+    await interaction.response.defer(ephemeral=True)
+    
+    embed = discord.Embed(
+        title="❓ Ajuda - Sistema Guardião",
+        description="Como usar o sistema de moderação",
+        color=0x39D353,
+        timestamp=datetime.now()
+    )
+    
+    embed.add_field(
+        name="🚨 Para Reportar",
+        value="Use `/report @usuário motivo` para reportar violações das regras.\nO sistema coletará automaticamente o contexto da conversa.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="👮 Para Guardiões",
+        value="• `/status online` - Entrar em serviço\n• `/status offline` - Sair de serviço\n• Acesse o site para analisar denúncias",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="⚖️ Sistema de Votação",
+        value="**Improcedente:** Não viola regras\n**Intimidou:** Violação leve\n**Grave:** Violação grave",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🔗 Links Úteis",
+        value=f"[Dashboard]({bot.site_url}/dashboard)\n[Lista de Denúncias]({bot.site_url}/reports/)\n[Painel Admin]({bot.site_url}/admin/)",
+        inline=False
+    )
+    
+    embed.set_footer(text="Para mais informações, visite nosso site")
+    
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
 async def main():
     """Função principal para executar o bot"""
+    # Configurar logging
+    logger = setup_logging()
+    
     token = os.getenv('DISCORD_BOT_TOKEN')
     if not token:
         print("❌ DISCORD_BOT_TOKEN não encontrado nas variáveis de ambiente!")
+        log_error("DISCORD_BOT_TOKEN não encontrado nas variáveis de ambiente")
         return
     
     try:
+        # Carregar comandos de administração
+        from bot.admin_commands import setup as setup_admin_commands
+        await setup_admin_commands(bot)
+        
+        print("🤖 Iniciando Sistema Guardião Bot...")
+        log_system_event("BOT_INITIALIZING", "Iniciando bot...")
         await bot.start(token)
     except Exception as e:
         print(f"❌ Erro ao iniciar bot: {e}")
+        log_error(f"Erro ao iniciar bot: {e}")
 
 
 if __name__ == "__main__":
