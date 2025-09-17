@@ -109,7 +109,7 @@ def test_postgresql_connection(max_retries=10, delay=2):
             print(f"🔄 Attempting PostgreSQL connection (attempt {attempt + 1}/{max_retries})...")
             
             # First test if host is reachable
-            host = os.getenv('DB_HOST', 'postgresql')
+            host = os.getenv('DB_HOST', 'localhost')  # Use localhost for local PostgreSQL
             port = int(os.getenv('DB_PORT', '5432'))
             
             # Try alternative hostnames/IPs for Discloud VLAN
