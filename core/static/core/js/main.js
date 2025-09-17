@@ -1,5 +1,5 @@
 /**
- * Sistema Guardião - JavaScript Principal
+ * Sistema Guardião - JavaScript Principal - Atualizado
  */
 
 // Utilitários
