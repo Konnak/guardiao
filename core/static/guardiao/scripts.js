@@ -1,6 +1,7 @@
 /**
  * Sistema Guardião - JavaScript Principal - Atualizado - Versão Final - Estrutura Única - FORÇANDO CÓPIA
- * TIMESTAMP: 2025-09-17 22:28:30
+ * TIMESTAMP: 2025-09-17 22:31:30
+ * FORÇANDO CÓPIA COM --clear
  */
 
 // Utilitários
