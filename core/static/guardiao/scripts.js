@@ -170,47 +170,126 @@ class VoteSystem {
 // Real-time Updates
 class RealTimeUpdates {
     constructor() {
+        this.lastCheck = null;
         this.init();
     }
 
     init() {
-        // Check for new reports every 30 seconds
-        if (window.location.pathname.includes('/dashboard')) {
-            setInterval(this.checkForUpdates.bind(this), 30000);
+        // Check for new reports every 5 seconds
+        if (window.location.pathname.includes('/dashboard') || window.location.pathname === '/') {
+            setInterval(this.checkForUpdates.bind(this), 5000);
         }
     }
 
     async checkForUpdates() {
         try {
-            const response = await fetch('/api/dashboard/updates/');
+            const url = this.lastCheck 
+                ? `/api/reports/check-new/?last_check=${this.lastCheck}`
+                : '/api/reports/check-new/';
+            
+            const response = await fetch(url);
             const data = await response.json();
             
-            if (data.new_reports > 0) {
-                this.showNewReportsNotification(data.new_reports);
+            if (data.success && data.count > 0) {
+                data.new_reports.forEach(report => {
+                    this.showReportNotification(report);
+                });
             }
+            
+            // Update last check timestamp
+            this.lastCheck = data.timestamp;
         } catch (error) {
             console.error('Erro ao verificar atualizações:', error);
         }
     }
 
-    showNewReportsNotification(count) {
+    showReportNotification(report) {
+        // Play notification sound
+        this.playNotificationSound();
+        
+        // Create popup notification
         const notification = document.createElement('div');
-        notification.className = 'alert alert-info';
+        notification.className = 'report-notification';
         notification.innerHTML = `
-            <i class="fas fa-bell"></i>
-            ${count} nova(s) denúncia(s) disponível(is) para análise!
-            <a href="/reports/" class="btn btn-sm btn-primary ml-2">Ver Denúncias</a>
+            <div class="notification-content">
+                <div class="notification-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Nova denúncia recebida!</span>
+                </div>
+                <div class="notification-body">
+                    <p><strong>Reportado:</strong> ${this.formatDateTime(report.created_at)}</p>
+                    <p><strong>Motivo:</strong> ${report.reason || 'Não especificado'}</p>
+                </div>
+                <div class="notification-actions">
+                    <button class="btn btn-primary btn-sm attend-btn" data-report-id="${report.id}">
+                        <i class="fas fa-hand-paper"></i> Atender
+                    </button>
+                    <button class="btn btn-secondary btn-sm dismiss-btn">
+                        <i class="fas fa-times"></i> Dispensar
+                    </button>
+                </div>
+            </div>
         `;
         
-        const messagesContainer = document.querySelector('.messages .container');
-        if (messagesContainer) {
-            messagesContainer.insertBefore(notification, messagesContainer.firstChild);
-            
-            // Auto remove after 10 seconds
-            setTimeout(() => {
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Auto dismiss after 30 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
                 notification.remove();
-            }, 10000);
+            }
+        }, 30000);
+        
+        // Add event listeners
+        notification.querySelector('.attend-btn').addEventListener('click', () => {
+            window.location.href = `/report/${report.id}/`;
+        });
+        
+        notification.querySelector('.dismiss-btn').addEventListener('click', () => {
+            notification.remove();
+        });
+        
+        // Animate in
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+    }
+
+    playNotificationSound() {
+        try {
+            // Create audio context for notification sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create a simple beep sound
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch (error) {
+            console.log('Não foi possível reproduzir o som de notificação:', error);
         }
+    }
+
+    formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 }
 

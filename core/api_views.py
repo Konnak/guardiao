@@ -343,6 +343,57 @@ def get_dashboard_stats(request):
         )
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def check_new_reports(request):
+    """
+    Endpoint para verificar novas denúncias (para notificações em tempo real)
+    """
+    try:
+        # Obter timestamp da última verificação
+        last_check = request.GET.get('last_check')
+        
+        if last_check:
+            from datetime import datetime
+            try:
+                last_check_dt = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+                new_reports = Report.objects.filter(
+                    created_at__gt=last_check_dt,
+                    status='pending'
+                ).order_by('-created_at')
+            except ValueError:
+                # Se timestamp inválido, retornar todas as denúncias pendentes
+                new_reports = Report.objects.filter(status='pending').order_by('-created_at')
+        else:
+            # Primeira verificação - retornar todas as denúncias pendentes
+            new_reports = Report.objects.filter(status='pending').order_by('-created_at')
+        
+        reports_data = []
+        for report in new_reports:
+            reports_data.append({
+                'id': report.id,
+                'reason': report.reason,
+                'created_at': report.created_at.isoformat(),
+                'reported_user_id': report.reported_user_id,
+                'reporter_user_id': report.reporter_user_id,
+                'guild_id': report.guild_id,
+                'channel_id': report.channel_id,
+            })
+        
+        return Response({
+            'success': True,
+            'new_reports': reports_data,
+            'count': len(reports_data),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao verificar novas denúncias: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 # Funções auxiliares
 def notify_guardians(report):
     """
