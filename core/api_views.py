@@ -350,12 +350,13 @@ def check_new_reports(request):
     Endpoint para verificar novas denúncias (para notificações em tempo real)
     """
     try:
+        from datetime import datetime
+        
         # Obter timestamp da última verificação
         last_check = request.GET.get('last_check')
         
         if last_check:
             try:
-                from datetime import datetime
                 last_check_dt = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
                 new_reports = Report.objects.filter(
                     created_at__gt=last_check_dt,

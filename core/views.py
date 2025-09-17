@@ -109,8 +109,8 @@ def discord_callback(request):
 @guardian_required
 def dashboard(request):
     """Dashboard do Guardião"""
-    guardian_id = request.session.get('guardian_id')
-    guardian = get_object_or_404(Guardian, id=guardian_id)
+    guardian_discord_id = request.session.get('guardian_id')
+    guardian = get_object_or_404(Guardian, discord_id=guardian_discord_id)
     
     # Denúncias pendentes
     pending_reports = Report.objects.filter(status='pending').order_by('-created_at')[:10]

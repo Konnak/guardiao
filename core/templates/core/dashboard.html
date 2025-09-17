@@ -227,6 +227,7 @@ function toggleStatus() {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
         },
         body: JSON.stringify({
+            guardian_id: {{ guardian.discord_id }},
             status: newStatus
         })
     })
