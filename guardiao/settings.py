@@ -112,16 +112,14 @@ def test_postgresql_connection(max_retries=10, delay=2):
             host = os.getenv('DB_HOST', 'postgresql')
             port = int(os.getenv('DB_PORT', '5432'))
             
-            # Try alternative hostnames/IPs for Discloud
+            # Try alternative hostnames/IPs for Discloud VLAN
             alternative_hosts = [
-                host,  # Original hostname
+                host,  # Original hostname (postgresql)
                 'postgresql.discloud.app',  # Alternative hostname
+                'postgresql.discloud.com',  # Another alternative
+                'postgresql',  # Direct hostname
                 'localhost',  # Local connection
                 '127.0.0.1',  # Local IP
-                '172.17.0.1',  # Docker bridge IP
-                '172.18.0.1',  # Alternative Docker IP
-                '172.19.0.1',  # Another Docker IP
-                '172.20.0.1',  # Another Docker IP
             ]
             
             # Debug: Check if PostgreSQL process is running
@@ -146,6 +144,30 @@ def test_postgresql_connection(max_retries=10, delay=2):
                         print(f"  {line.strip()}")
             except Exception as e:
                 print(f"❌ Error checking network: {e}")
+            
+            # Debug: Try to resolve hostname
+            print("🔍 Trying to resolve hostname 'postgresql'...")
+            try:
+                import socket
+                ip = socket.gethostbyname('postgresql')
+                print(f"✅ Hostname 'postgresql' resolves to: {ip}")
+            except Exception as e:
+                print(f"❌ Cannot resolve 'postgresql': {e}")
+            
+            # Debug: Check /etc/hosts
+            print("🔍 Checking /etc/hosts...")
+            try:
+                with open('/etc/hosts', 'r') as f:
+                    hosts_content = f.read()
+                    if 'postgresql' in hosts_content:
+                        print("✅ Found 'postgresql' in /etc/hosts:")
+                        for line in hosts_content.split('\n'):
+                            if 'postgresql' in line:
+                                print(f"  {line.strip()}")
+                    else:
+                        print("❌ 'postgresql' not found in /etc/hosts")
+            except Exception as e:
+                print(f"❌ Error reading /etc/hosts: {e}")
             
             # Test each alternative host
             working_host = None
