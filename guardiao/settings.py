@@ -32,6 +32,13 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Debug Django configuration
+print("=== DJANGO CONFIGURATION DEBUG ===")
+print(f"SECRET_KEY: {'SET' if os.getenv('SECRET_KEY') else 'NOT SET'}")
+print(f"DEBUG: {DEBUG}")
+print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+print("===================================")
+
 
 # Application definition
 
@@ -81,6 +88,15 @@ WSGI_APPLICATION = "guardiao.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+# Debug database configuration
+print("=== DATABASE CONFIGURATION DEBUG ===")
+print(f"DB_NAME: {os.getenv('DB_NAME', 'guardiaodatabase')}")
+print(f"DB_USER: {os.getenv('DB_USER', 'guardiao')}")
+print(f"DB_PASSWORD: {'*' * len(os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'))}")
+print(f"DB_HOST: {os.getenv('DB_HOST', 'postgresql')}")
+print(f"DB_PORT: {os.getenv('DB_PORT', '5432')}")
+print("=====================================")
 
 DATABASES = {
     "default": {
@@ -146,6 +162,14 @@ DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET')
 
 # Site Configuration
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8080')
+
+# Debug Discord configuration
+print("=== DISCORD CONFIGURATION DEBUG ===")
+print(f"DISCORD_BOT_TOKEN: {'SET' if DISCORD_BOT_TOKEN else 'NOT SET'}")
+print(f"DISCORD_CLIENT_ID: {'SET' if DISCORD_CLIENT_ID else 'NOT SET'}")
+print(f"DISCORD_CLIENT_SECRET: {'SET' if DISCORD_CLIENT_SECRET else 'NOT SET'}")
+print(f"SITE_URL: {SITE_URL}")
+print("====================================")
 
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento
