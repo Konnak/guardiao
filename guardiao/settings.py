@@ -112,14 +112,37 @@ def test_postgresql_connection(max_retries=10, delay=2):
             host = os.getenv('DB_HOST', 'postgresql')
             port = int(os.getenv('DB_PORT', '5432'))
             
-            # Test socket connection
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5)
-            result = sock.connect_ex((host, port))
-            sock.close()
+            # Try alternative hostnames/IPs for Discloud
+            alternative_hosts = [
+                host,  # Original hostname
+                'postgresql.discloud.app',  # Alternative hostname
+                'localhost',  # Local connection
+                '127.0.0.1',  # Local IP
+                '172.17.0.1',  # Docker bridge IP
+                '172.18.0.1',  # Alternative Docker IP
+            ]
             
-            if result != 0:
-                print(f"❌ Host {host}:{port} not reachable (attempt {attempt + 1})")
+            # Test each alternative host
+            working_host = None
+            for test_host in alternative_hosts:
+                try:
+                    print(f"🔍 Testing host: {test_host}:{port}")
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(5)
+                    result = sock.connect_ex((test_host, port))
+                    sock.close()
+                    
+                    if result == 0:
+                        print(f"✅ Host {test_host}:{port} is reachable!")
+                        working_host = test_host
+                        break
+                    else:
+                        print(f"❌ Host {test_host}:{port} not reachable")
+                except Exception as e:
+                    print(f"❌ Error testing {test_host}:{port}: {e}")
+            
+            if not working_host:
+                print(f"❌ No PostgreSQL hosts reachable (attempt {attempt + 1})")
                 if attempt < max_retries - 1:
                     print(f"⏳ Waiting {delay} seconds before retry...")
                     time.sleep(delay)
@@ -127,10 +150,10 @@ def test_postgresql_connection(max_retries=10, delay=2):
                 else:
                     return False
             
-            # Test PostgreSQL connection
+            # Test PostgreSQL connection with working host
             import psycopg2
             conn = psycopg2.connect(
-                host=host,
+                host=working_host,
                 port=port,
                 user=os.getenv('DB_USER', 'guardiao'),
                 password=os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
@@ -138,7 +161,10 @@ def test_postgresql_connection(max_retries=10, delay=2):
                 connect_timeout=10
             )
             conn.close()
-            print("✅ PostgreSQL connection successful!")
+            print(f"✅ PostgreSQL connection successful with host: {working_host}")
+            
+            # Update the working host for Django
+            os.environ['DB_HOST'] = working_host
             return True
             
         except Exception as e:
