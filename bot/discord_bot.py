@@ -527,6 +527,10 @@ async def main():
         from bot.admin_commands import setup as setup_admin_commands
         await setup_admin_commands(bot)
         
+        # Iniciar servidor API
+        from bot.api_server import start_api_server
+        await start_api_server(bot)
+        
         print("🤖 Iniciando Sistema Guardião Bot...")
         log_system_event("BOT_INITIALIZING", "Iniciando bot...")
         await bot.start(token)
