@@ -106,12 +106,28 @@ class GuardiaoBot(commands.Bot):
         
         # Sincronizar comandos slash
         try:
+            # Aguardar um pouco para garantir que o bot está totalmente conectado
+            await asyncio.sleep(2)
+            
             synced = await self.tree.sync()
             print(f"✅ {len(synced)} comandos slash sincronizados")
+            print("📋 Comandos disponíveis:")
+            for cmd in synced:
+                print(f"   - /{cmd.name}: {cmd.description}")
+            
             log_system_event("COMMANDS_SYNCED", f"{len(synced)} comandos sincronizados")
         except Exception as e:
             print(f"❌ Erro ao sincronizar comandos: {e}")
             log_error(f"Erro ao sincronizar comandos: {e}")
+            
+            # Tentar novamente após 5 segundos
+            try:
+                await asyncio.sleep(5)
+                synced = await self.tree.sync()
+                print(f"✅ Segunda tentativa: {len(synced)} comandos sincronizados")
+            except Exception as e2:
+                print(f"❌ Segunda tentativa falhou: {e2}")
+                log_error(f"Segunda tentativa de sincronização falhou: {e2}")
     
     async def on_message(self, message):
         """Evento executado quando uma mensagem é enviada"""
@@ -507,6 +523,42 @@ async def help_command(interaction: discord.Interaction):
     )
     
     embed.set_footer(text="Para mais informações, visite nosso site")
+    
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="sync", description="Sincroniza comandos slash (apenas para administradores)")
+async def sync_command(interaction: discord.Interaction):
+    """Comando para sincronizar comandos slash"""
+    # Verificar se é administrador
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ Você não tem permissão para usar este comando.", ephemeral=True)
+        return
+    
+    await interaction.response.defer(ephemeral=True)
+    
+    try:
+        synced = await bot.tree.sync()
+        await interaction.followup.send(f"✅ {len(synced)} comandos sincronizados com sucesso!", ephemeral=True)
+        log_system_event("COMMANDS_MANUAL_SYNC", f"{len(synced)} comandos sincronizados manualmente por {interaction.user.name}")
+    except Exception as e:
+        await interaction.followup.send(f"❌ Erro ao sincronizar comandos: {str(e)}", ephemeral=True)
+        log_error(f"Erro na sincronização manual: {e}")
+
+
+@bot.tree.command(name="ping", description="Testa a latência do bot")
+async def ping_command(interaction: discord.Interaction):
+    """Comando de ping para testar latência"""
+    await interaction.response.defer(ephemeral=True)
+    
+    latency = round(bot.latency * 1000)
+    
+    embed = discord.Embed(
+        title="🏓 Pong!",
+        description=f"Latência: {latency}ms",
+        color=0x39D353 if latency < 100 else 0xff6b6b,
+        timestamp=datetime.now()
+    )
     
     await interaction.followup.send(embed=embed, ephemeral=True)
 
