@@ -641,9 +641,13 @@ def get_guardian_status(request, guardian_id):
                     'is_online': guardian.status == 'online'
                 })
             else:
+                # Para discord_ids reais, retornar erro mais informativo
+                print(f"❌ Guardião com discord_id {guardian_id} não encontrado - usuário não registrado")
                 return Response({
                     'success': False,
-                    'error': f'Guardião com ID {guardian_id} não encontrado'
+                    'error': f'Usuário não registrado como Guardião',
+                    'message': 'Para se tornar um Guardião, faça login no site primeiro',
+                    'discord_id': guardian_id
                 }, status=status.HTTP_404_NOT_FOUND)
             
     except Exception as e:
