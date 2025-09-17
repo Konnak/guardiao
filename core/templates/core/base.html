@@ -19,7 +19,12 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body {% if request.session.guardian_id %}data-guardian-id="{{ request.session.guardian_id }}"{% endif %}>
+    <!-- Guardian ID for JavaScript -->
+    {% if request.session.guardian_id %}
+        <input type="hidden" name="guardian_discord_id" value="{{ request.session.guardian_id }}">
+    {% endif %}
+    
     <!-- Header -->
     <header class="header">
         <div class="container">

@@ -684,3 +684,27 @@ def cast_vote_in_session(request):
             {'error': f'Erro ao registrar voto: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def test_pending_reports(request):
+    """
+    Endpoint para testar se há denúncias pendentes na fila
+    """
+    try:
+        pending_count = ReportQueue.objects.filter(status='pending').count()
+        total_reports = Report.objects.filter(status='pending').count()
+        
+        return Response({
+            'success': True,
+            'pending_in_queue': pending_count,
+            'total_pending_reports': total_reports,
+            'message': f'Há {pending_count} denúncias pendentes na fila'
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao verificar denúncias pendentes: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

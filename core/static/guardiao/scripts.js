@@ -182,6 +182,8 @@ class RealTimeUpdates {
             setInterval(this.checkForUpdates.bind(this), 5000);
             // Verificar se há denúncia pendente para o Guardião atual
             this.checkPendingReport();
+            // Verificar denúncias pendentes a cada 10 segundos
+            setInterval(this.checkPendingReport.bind(this), 10000);
         }
     }
 
@@ -298,25 +300,84 @@ class RealTimeUpdates {
 
             async checkPendingReport() {
                 try {
-                    // Obter ID do Guardião atual (você precisará implementar isso)
+                    // Obter ID do Guardião atual
                     const guardianId = this.getCurrentGuardianId();
-                    if (!guardianId) return;
+                    console.log('🔍 Verificando denúncia pendente para Guardião ID:', guardianId);
+                    
+                    if (!guardianId) {
+                        console.warn('⚠️ ID do Guardião não encontrado');
+                        return;
+                    }
 
                     const response = await fetch(`/api/guardian/${guardianId}/pending-report/`);
                     const data = await response.json();
+                    
+                    console.log('📋 Resposta da API:', data);
 
                     if (data.session_id && !this.currentSession) {
+                        console.log('🎯 Nova sessão encontrada:', data.session_id);
                         this.currentSession = data;
                         this.showVotingModal(data);
+                    } else if (data.message) {
+                        console.log('ℹ️', data.message);
                     }
                 } catch (error) {
-                    console.error('Erro ao verificar denúncia pendente:', error);
+                    console.error('❌ Erro ao verificar denúncia pendente:', error);
                 }
             }
 
             getCurrentGuardianId() {
-                // Implementar lógica para obter ID do Guardião atual
-                // Por enquanto, retornar null - você precisará implementar isso
+                // Tentar obter ID do Guardião de diferentes formas
+                console.log('🔍 Buscando ID do Guardião...');
+                
+                // 1. Verificar se está armazenado no localStorage
+                let guardianId = localStorage.getItem('guardian_discord_id');
+                if (guardianId) {
+                    console.log('✅ ID encontrado no localStorage:', guardianId);
+                    return parseInt(guardianId);
+                }
+                
+                // 2. Verificar se está em um elemento hidden na página
+                const hiddenInput = document.querySelector('input[name="guardian_discord_id"]');
+                if (hiddenInput && hiddenInput.value) {
+                    console.log('✅ ID encontrado no input hidden:', hiddenInput.value);
+                    localStorage.setItem('guardian_discord_id', hiddenInput.value);
+                    return parseInt(hiddenInput.value);
+                }
+                
+                // 3. Verificar se está em um data attribute do body
+                const bodyGuardianId = document.body.dataset.guardianId;
+                if (bodyGuardianId) {
+                    console.log('✅ ID encontrado no data attribute do body:', bodyGuardianId);
+                    localStorage.setItem('guardian_discord_id', bodyGuardianId);
+                    return parseInt(bodyGuardianId);
+                }
+                
+                // 4. Verificar se está em um script tag com dados
+                const scriptTag = document.querySelector('script[data-guardian-id]');
+                if (scriptTag) {
+                    const id = scriptTag.dataset.guardianId;
+                    console.log('✅ ID encontrado no script tag:', id);
+                    localStorage.setItem('guardian_discord_id', id);
+                    return parseInt(id);
+                }
+                
+                // 5. Tentar obter da URL ou parâmetros
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlGuardianId = urlParams.get('guardian_id');
+                if (urlGuardianId) {
+                    console.log('✅ ID encontrado na URL:', urlGuardianId);
+                    localStorage.setItem('guardian_discord_id', urlGuardianId);
+                    return parseInt(urlGuardianId);
+                }
+                
+                console.warn('❌ ID do Guardião não encontrado em nenhum local. Modal não será exibido.');
+                console.log('🔍 Elementos verificados:');
+                console.log('  - localStorage:', localStorage.getItem('guardian_discord_id'));
+                console.log('  - input hidden:', document.querySelector('input[name="guardian_discord_id"]'));
+                console.log('  - body data attribute:', document.body.dataset.guardianId);
+                console.log('  - script tag:', document.querySelector('script[data-guardian-id]'));
+                console.log('  - URL params:', new URLSearchParams(window.location.search).get('guardian_id'));
                 return null;
             }
 

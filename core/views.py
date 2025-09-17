@@ -95,8 +95,8 @@ def discord_callback(request):
             guardian.save()
         
         # Criar sessão de usuário
-        request.session['guardian_id'] = guardian.id
-        request.session['discord_id'] = guardian.discord_id
+        request.session['guardian_id'] = guardian.discord_id  # Usar discord_id para API
+        request.session['guardian_db_id'] = guardian.id  # ID do banco para outras operações
         
         messages.success(request, f'Bem-vindo, {guardian.discord_display_name}!')
         return redirect('dashboard')
