@@ -288,9 +288,9 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Static files directories
-# STATICFILES_DIRS = [
-#     BASE_DIR / "core" / "static",
-# ]
+STATICFILES_DIRS = [
+    BASE_DIR / "core" / "static",
+]
 
 # Static files finders
 STATICFILES_FINDERS = [
