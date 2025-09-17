@@ -192,16 +192,14 @@ class RealTimeUpdates {
             const url = this.lastCheck 
                 ? `/api/reports/check-new/?last_check=${this.lastCheck}`
                 : '/api/reports/check-new/';
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
-            if (data.success && data.count > 0) {
-                data.new_reports.forEach(report => {
-                    this.showReportNotification(report);
-                });
-            }
-            
+
+            // Sistema antigo de notificações desabilitado
+            // Agora usamos apenas o modal de votação
+            console.log('📊 Verificação de atualizações:', data.count, 'novas denúncias');
+
             // Update last check timestamp
             this.lastCheck = data.timestamp;
         } catch (error) {
@@ -330,14 +328,21 @@ class RealTimeUpdates {
                 // Tentar obter ID do Guardião de diferentes formas
                 console.log('🔍 Buscando ID do Guardião...');
                 
-                // 1. Verificar se está armazenado no localStorage
+                // 1. Verificar variável global (mais confiável)
+                if (window.GUARDIAN_DISCORD_ID) {
+                    console.log('✅ ID encontrado na variável global:', window.GUARDIAN_DISCORD_ID);
+                    localStorage.setItem('guardian_discord_id', window.GUARDIAN_DISCORD_ID);
+                    return parseInt(window.GUARDIAN_DISCORD_ID);
+                }
+                
+                // 2. Verificar se está armazenado no localStorage
                 let guardianId = localStorage.getItem('guardian_discord_id');
                 if (guardianId) {
                     console.log('✅ ID encontrado no localStorage:', guardianId);
                     return parseInt(guardianId);
                 }
                 
-                // 2. Verificar se está em um elemento hidden na página
+                // 3. Verificar se está em um elemento hidden na página
                 const hiddenInput = document.querySelector('input[name="guardian_discord_id"]');
                 if (hiddenInput && hiddenInput.value) {
                     console.log('✅ ID encontrado no input hidden:', hiddenInput.value);
@@ -345,21 +350,12 @@ class RealTimeUpdates {
                     return parseInt(hiddenInput.value);
                 }
                 
-                // 3. Verificar se está em um data attribute do body
+                // 4. Verificar se está em um data attribute do body
                 const bodyGuardianId = document.body.dataset.guardianId;
                 if (bodyGuardianId) {
                     console.log('✅ ID encontrado no data attribute do body:', bodyGuardianId);
                     localStorage.setItem('guardian_discord_id', bodyGuardianId);
                     return parseInt(bodyGuardianId);
-                }
-                
-                // 4. Verificar se está em um script tag com dados
-                const scriptTag = document.querySelector('script[data-guardian-id]');
-                if (scriptTag) {
-                    const id = scriptTag.dataset.guardianId;
-                    console.log('✅ ID encontrado no script tag:', id);
-                    localStorage.setItem('guardian_discord_id', id);
-                    return parseInt(id);
                 }
                 
                 // 5. Tentar obter da URL ou parâmetros
@@ -373,10 +369,10 @@ class RealTimeUpdates {
                 
                 console.warn('❌ ID do Guardião não encontrado em nenhum local. Modal não será exibido.');
                 console.log('🔍 Elementos verificados:');
+                console.log('  - window.GUARDIAN_DISCORD_ID:', window.GUARDIAN_DISCORD_ID);
                 console.log('  - localStorage:', localStorage.getItem('guardian_discord_id'));
                 console.log('  - input hidden:', document.querySelector('input[name="guardian_discord_id"]'));
                 console.log('  - body data attribute:', document.body.dataset.guardianId);
-                console.log('  - script tag:', document.querySelector('script[data-guardian-id]'));
                 console.log('  - URL params:', new URLSearchParams(window.location.search).get('guardian_id'));
                 return null;
             }

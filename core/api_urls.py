@@ -26,5 +26,6 @@ urlpatterns = [
     # Endpoints para sistema de fila e modal
     path('guardian/<int:guardian_id>/pending-report/', api_views.get_pending_report_for_guardian, name='api_get_pending_report'),
     path('session/vote/', api_views.cast_vote_in_session, name='api_cast_vote_in_session'),
+    path('session/leave/', api_views.leave_voting_session, name='api_leave_voting_session'),
     path('test/pending-reports/', api_views.test_pending_reports, name='api_test_pending_reports'),
 ]

@@ -687,6 +687,73 @@ def cast_vote_in_session(request):
         )
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def leave_voting_session(request):
+    """
+    Endpoint para Guardião sair de uma sessão de votação
+    """
+    try:
+        from django.utils import timezone
+        
+        data = request.data
+        
+        # Validar dados
+        if 'session_id' not in data or 'guardian_id' not in data:
+            return Response(
+                {'error': 'Campos obrigatórios ausentes'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Buscar sessão e Guardião
+        try:
+            session = VotingSession.objects.get(id=data['session_id'])
+            guardian = Guardian.objects.get(discord_id=data['guardian_id'])
+            session_guardian = SessionGuardian.objects.get(
+                session=session,
+                guardian=guardian,
+                is_active=True
+            )
+        except (VotingSession.DoesNotExist, Guardian.DoesNotExist, SessionGuardian.DoesNotExist):
+            return Response(
+                {'error': 'Sessão ou Guardião não encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Marcar como inativo
+        session_guardian.is_active = False
+        session_guardian.left_at = timezone.now()
+        session_guardian.save()
+        
+        # Se não votou, cancelar o voto
+        if not session_guardian.has_voted:
+            # Remover da sessão
+            session_guardian.delete()
+            
+            # Verificar se ainda há Guardiões ativos
+            active_guardians = session.get_active_guardians()
+            if active_guardians.count() == 0:
+                # Cancelar sessão e recolocar na fila
+                session.status = 'cancelled'
+                session.save()
+                
+                queue_item = ReportQueue.objects.get(report=session.report)
+                queue_item.status = 'pending'
+                queue_item.assigned_at = None
+                queue_item.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Saiu da sessão com sucesso'
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao sair da sessão: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def test_pending_reports(request):

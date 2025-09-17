@@ -23,6 +23,10 @@
     <!-- Guardian ID for JavaScript -->
     {% if request.session.guardian_id %}
         <input type="hidden" name="guardian_discord_id" value="{{ request.session.guardian_id }}">
+        <script>
+            // Definir ID do Guardião globalmente
+            window.GUARDIAN_DISCORD_ID = {{ request.session.guardian_id }};
+        </script>
     {% endif %}
     
     <!-- Header -->
