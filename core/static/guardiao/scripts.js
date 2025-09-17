@@ -307,6 +307,24 @@ class RealTimeUpdates {
                         return;
                     }
 
+                    // Primeiro verificar se o Guardião está online
+                    const statusResponse = await fetch(`/api/guardian/${guardianId}/status/`);
+                    const statusData = await statusResponse.json();
+                    
+                    console.log('👤 Status do Guardião:', statusData);
+
+                    if (!statusData.success) {
+                        console.warn('❌ Guardião não encontrado:', statusData.error);
+                        return;
+                    }
+
+                    if (!statusData.is_online) {
+                        console.log('⏸️ Guardião offline - não verificando denúncias pendentes');
+                        return;
+                    }
+
+                    console.log('✅ Guardião online - verificando denúncias pendentes');
+
                     const response = await fetch(`/api/guardian/${guardianId}/pending-report/`);
                     const data = await response.json();
                     
@@ -318,6 +336,8 @@ class RealTimeUpdates {
                         this.showVotingModal(data);
                     } else if (data.message) {
                         console.log('ℹ️', data.message);
+                    } else if (data.error) {
+                        console.log('⚠️ Erro:', data.error);
                     }
                 } catch (error) {
                     console.error('❌ Erro ao verificar denúncia pendente:', error);

@@ -447,8 +447,16 @@ def get_pending_report_for_guardian(request, guardian_id):
         # Verificar se o Guardião está online
         try:
             guardian = Guardian.objects.get(discord_id=guardian_id, status='online')
+            print(f"✅ Guardião encontrado: {guardian.discord_display_name} (ID: {guardian.discord_id}, Status: {guardian.status})")
         except Guardian.DoesNotExist:
-            return Response({'error': 'Guardião não encontrado ou offline'}, status=status.HTTP_404_NOT_FOUND)
+            # Verificar se o Guardião existe mas está offline
+            try:
+                guardian_offline = Guardian.objects.get(discord_id=guardian_id)
+                print(f"❌ Guardião encontrado mas offline: {guardian_offline.discord_display_name} (ID: {guardian_offline.discord_id}, Status: {guardian_offline.status})")
+                return Response({'error': f'Guardião {guardian_offline.discord_display_name} está offline. Entre em serviço primeiro.'}, status=status.HTTP_404_NOT_FOUND)
+            except Guardian.DoesNotExist:
+                print(f"❌ Guardião com discord_id {guardian_id} não encontrado no banco")
+                return Response({'error': f'Guardião com ID {guardian_id} não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         
         # Verificar se já está em uma sessão ativa
         active_session = SessionGuardian.objects.filter(
@@ -562,6 +570,40 @@ def get_pending_report_for_guardian(request, guardian_id):
     except Exception as e:
         return Response(
             {'error': f'Erro ao obter denúncia pendente: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_guardian_status(request, guardian_id):
+    """
+    Endpoint para verificar o status de um Guardião
+    """
+    try:
+        try:
+            guardian = Guardian.objects.get(discord_id=guardian_id)
+            return Response({
+                'success': True,
+                'guardian': {
+                    'id': guardian.id,
+                    'discord_id': guardian.discord_id,
+                    'discord_display_name': guardian.discord_display_name,
+                    'status': guardian.status,
+                    'level': guardian.level,
+                    'points': guardian.points
+                },
+                'is_online': guardian.status == 'online'
+            })
+        except Guardian.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': f'Guardião com ID {guardian_id} não encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao verificar status do Guardião: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
