@@ -102,7 +102,7 @@ print("=====================================")
 import time
 import socket
 
-def test_postgresql_connection(max_retries=10, delay=2):
+def test_postgresql_connection(max_retries=3, delay=1):
     """Test PostgreSQL connection with retry mechanism"""
     for attempt in range(max_retries):
         try:
@@ -175,7 +175,7 @@ def test_postgresql_connection(max_retries=10, delay=2):
                 try:
                     print(f"🔍 Testing host: {test_host}:{port}")
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(5)
+                    sock.settimeout(2)  # Reduced timeout
                     result = sock.connect_ex((test_host, port))
                     sock.close()
                     
@@ -205,7 +205,7 @@ def test_postgresql_connection(max_retries=10, delay=2):
                 user=os.getenv('DB_USER', 'guardiao'),
                 password=os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
                 database=os.getenv('DB_NAME', 'guardiaodatabase'),
-                connect_timeout=10
+                connect_timeout=5  # Reduced timeout
             )
             conn.close()
             print(f"✅ PostgreSQL connection successful with host: {working_host}")
@@ -236,7 +236,7 @@ if test_postgresql_connection():
             "HOST": os.getenv('DB_HOST', 'postgresql'),
             "PORT": os.getenv('DB_PORT', '5432'),
             "OPTIONS": {
-                'connect_timeout': 10,
+                'connect_timeout': 5,  # Reduced timeout
             }
         }
     }
