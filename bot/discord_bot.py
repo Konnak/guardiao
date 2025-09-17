@@ -16,7 +16,10 @@ from typing import Dict, List, Optional
 # Configurar Django
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'guardiao.settings')
-django.setup()
+try:
+    django.setup()
+except Exception as e:
+    print(f"Erro ao configurar Django: {e}")
 
 from core.models import Guardian, Report, Message
 

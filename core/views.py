@@ -2,7 +2,6 @@
 Views para o Sistema Guardião
 """
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
 from django.http import JsonResponse
@@ -15,6 +14,7 @@ import requests
 import json
 from .models import Guardian, Report, Vote, Message, Appeal
 from .forms import VoteForm
+from .decorators import guardian_required
 
 
 def home(request):
@@ -30,8 +30,10 @@ def home(request):
 
 def discord_login(request):
     """Inicia o processo de login com Discord OAuth2"""
-    client_id = request.settings.DISCORD_CLIENT_ID
-    redirect_uri = f"{request.settings.SITE_URL}/auth/discord/callback/"
+    from django.conf import settings
+    
+    client_id = settings.DISCORD_CLIENT_ID
+    redirect_uri = f"{settings.SITE_URL}/auth/discord/callback/"
     
     discord_auth_url = (
         f"https://discord.com/api/oauth2/authorize"
@@ -46,6 +48,8 @@ def discord_login(request):
 
 def discord_callback(request):
     """Callback do Discord OAuth2"""
+    from django.conf import settings
+    
     code = request.GET.get('code')
     if not code:
         messages.error(request, 'Erro na autenticação com Discord')
@@ -54,11 +58,11 @@ def discord_callback(request):
     try:
         # Trocar código por token
         token_data = {
-            'client_id': request.settings.DISCORD_CLIENT_ID,
-            'client_secret': request.settings.DISCORD_CLIENT_SECRET,
+            'client_id': settings.DISCORD_CLIENT_ID,
+            'client_secret': settings.DISCORD_CLIENT_SECRET,
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': f"{request.settings.SITE_URL}/auth/discord/callback/"
+            'redirect_uri': f"{settings.SITE_URL}/auth/discord/callback/"
         }
         
         response = requests.post('https://discord.com/api/oauth2/token', data=token_data)
@@ -102,13 +106,10 @@ def discord_callback(request):
         return redirect('home')
 
 
-@login_required
+@guardian_required
 def dashboard(request):
     """Dashboard do Guardião"""
     guardian_id = request.session.get('guardian_id')
-    if not guardian_id:
-        return redirect('discord_login')
-    
     guardian = get_object_or_404(Guardian, id=guardian_id)
     
     # Denúncias pendentes
@@ -130,13 +131,10 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
-@login_required
+@guardian_required
 def report_detail(request, report_id):
     """Página de análise de denúncia"""
     guardian_id = request.session.get('guardian_id')
-    if not guardian_id:
-        return redirect('discord_login')
-    
     guardian = get_object_or_404(Guardian, id=guardian_id)
     report = get_object_or_404(Report, id=report_id)
     
