@@ -110,7 +110,7 @@ class Report(models.Model):
         if self.total_votes < 5:
             return 'none'
         
-        # Regras de punição conforme especificado
+        # Regras de punição conforme especificado no BASE.md
         if self.votes_improcedente >= 3:
             return 'none'
         elif self.votes_intimidou == 3 and self.votes_grave == 0:
@@ -125,6 +125,16 @@ class Report(models.Model):
             return 'ban_24h'
         else:
             return 'none'
+    
+    def get_punishment_display(self):
+        """Retorna a descrição da punição"""
+        punishment_display = {
+            'none': 'Nenhuma',
+            'mute_1h': 'Mute de 1 hora',
+            'mute_12h': 'Mute de 12 horas',
+            'ban_24h': 'Banimento de 24 horas',
+        }
+        return punishment_display.get(self.punishment, 'Desconhecida')
 
 
 class Vote(models.Model):
@@ -212,6 +222,58 @@ class Appeal(models.Model):
     
     def __str__(self):
         return f"Apelação da denúncia #{self.report.id}"
+    
+    def calculate_appeal_result(self):
+        """Calcula o resultado da apelação"""
+        if self.appeal_total_votes < 5:
+            return None
+        
+        # Lógica de apelação: maioria decide
+        if self.appeal_votes_improcedente >= 3:
+            return 'approved'  # Apelação aprovada - punição revogada
+        elif self.appeal_votes_intimidou >= 3 or self.appeal_votes_grave >= 3:
+            return 'rejected'  # Apelação rejeitada - punição mantida
+        else:
+            return None  # Ainda não há resultado claro
+    
+    def process_appeal_result(self):
+        """Processa o resultado da apelação"""
+        result = self.calculate_appeal_result()
+        
+        if result == 'approved':
+            self.status = 'approved'
+            # Revogar punição original
+            self.report.punishment = 'none'
+            self.report.status = 'closed'
+            self.report.save()
+            
+            # Penalizar Guardiões que votaram incorretamente
+            self.penalize_original_guardians()
+            
+        elif result == 'rejected':
+            self.status = 'rejected'
+            # Manter punição original
+            # Aplicar punição dobrada se necessário
+            self.apply_doubled_punishment()
+        
+        if result:
+            self.completed_at = timezone.now()
+            self.save()
+    
+    def penalize_original_guardians(self):
+        """Penaliza Guardiões que votaram incorretamente na denúncia original"""
+        original_votes = Vote.objects.filter(report=self.report)
+        
+        for vote in original_votes:
+            if vote.vote_type in ['intimidou', 'grave']:
+                guardian = vote.guardian
+                guardian.points = max(0, guardian.points - 3)  # Perder 3 pontos
+                guardian.save()
+    
+    def apply_doubled_punishment(self):
+        """Aplica punição dobrada se necessário"""
+        # Implementar lógica de punição dobrada conforme especificado
+        pass
 
 
 class AppealVote(models.Model):
