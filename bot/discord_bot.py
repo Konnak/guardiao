@@ -347,6 +347,13 @@ async def report_command(
             status='pending'
         )
         
+        # Adicionar à fila de denúncias
+        await sync_to_async(ReportQueue.objects.create)(
+            report=report,
+            status='pending',
+            priority=1  # Prioridade padrão
+        )
+        
         # Log da criação da denúncia
         log_report_created(report.id, interaction.user.id, usuario.id, interaction.guild.id)
         

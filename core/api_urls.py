@@ -22,4 +22,8 @@ urlpatterns = [
     
     # Endpoints para notificações em tempo real
     path('reports/check-new/', api_views.check_new_reports, name='api_check_new_reports'),
+    
+    # Endpoints para sistema de fila e modal
+    path('guardian/<int:guardian_id>/pending-report/', api_views.get_pending_report_for_guardian, name='api_get_pending_report'),
+    path('session/vote/', api_views.cast_vote_in_session, name='api_cast_vote_in_session'),
 ]

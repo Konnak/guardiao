@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+import uuid
 
 
 class Guardian(models.Model):
@@ -299,3 +300,96 @@ class AppealVote(models.Model):
     
     def __str__(self):
         return f"{self.guardian.discord_display_name} votou {self.get_vote_type_display()} na apelação #{self.appeal.id}"
+
+
+class VotingSession(models.Model):
+    """Modelo para controlar sessões de votação simultâneas"""
+    
+    STATUS_CHOICES = [
+        ('waiting', 'Aguardando Guardiões'),
+        ('voting', 'Em Votação'),
+        ('completed', 'Concluída'),
+        ('cancelled', 'Cancelada'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, verbose_name="Denúncia")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting', verbose_name="Status")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name="Iniciado em")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Concluído em")
+    
+    # Controle de tempo
+    voting_deadline = models.DateTimeField(null=True, blank=True, verbose_name="Prazo para Votação")
+    
+    class Meta:
+        verbose_name = "Sessão de Votação"
+        verbose_name_plural = "Sessões de Votação"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Sessão #{self.id} - Denúncia #{self.report.id} ({self.get_status_display()})"
+    
+    def is_expired(self):
+        """Verifica se a sessão expirou"""
+        if not self.voting_deadline:
+            return False
+        return timezone.now() > self.voting_deadline
+    
+    def get_active_guardians(self):
+        """Retorna os Guardiões ativos na sessão"""
+        return self.sessionguardian_set.filter(is_active=True)
+
+
+class SessionGuardian(models.Model):
+    """Modelo para controlar Guardiões em sessões de votação"""
+    
+    session = models.ForeignKey(VotingSession, on_delete=models.CASCADE, verbose_name="Sessão")
+    guardian = models.ForeignKey(Guardian, on_delete=models.CASCADE, verbose_name="Guardião")
+    
+    is_active = models.BooleanField(default=True, verbose_name="Ativo na Sessão")
+    joined_at = models.DateTimeField(auto_now_add=True, verbose_name="Entrou em")
+    left_at = models.DateTimeField(null=True, blank=True, verbose_name="Saiu em")
+    
+    # Controle de votação
+    has_voted = models.BooleanField(default=False, verbose_name="Já Votou")
+    vote_type = models.CharField(max_length=20, choices=Vote.VOTE_CHOICES, null=True, blank=True, verbose_name="Tipo de Voto")
+    voted_at = models.DateTimeField(null=True, blank=True, verbose_name="Votou em")
+    
+    class Meta:
+        verbose_name = "Guardião da Sessão"
+        verbose_name_plural = "Guardiões da Sessão"
+        unique_together = ['session', 'guardian']
+        ordering = ['joined_at']
+    
+    def __str__(self):
+        return f"{self.guardian.discord_display_name} na Sessão #{self.session.id}"
+
+
+class ReportQueue(models.Model):
+    """Modelo para controlar a fila de denúncias pendentes"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('assigned', 'Atribuída'),
+        ('processing', 'Processando'),
+        ('completed', 'Concluída'),
+        ('cancelled', 'Cancelada'),
+    ]
+    
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, verbose_name="Denúncia")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
+    
+    priority = models.IntegerField(default=0, verbose_name="Prioridade")  # Maior número = maior prioridade
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    assigned_at = models.DateTimeField(null=True, blank=True, verbose_name="Atribuída em")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Concluída em")
+    
+    class Meta:
+        verbose_name = "Fila de Denúncias"
+        verbose_name_plural = "Fila de Denúncias"
+        ordering = ['-priority', 'created_at']
+    
+    def __str__(self):
+        return f"Fila #{self.id} - Denúncia #{self.report.id} ({self.get_status_display()})"

@@ -1221,3 +1221,250 @@ body {
         font-size: 0.9rem;
     }
 }
+
+/* Voting Modal Styles */
+.voting-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voting-modal {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--secondary-bg);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+.timer {
+    background-color: var(--accent-danger);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    font-size: 1.1rem;
+    min-width: 80px;
+    text-align: center;
+}
+
+.modal-content {
+    padding: var(--spacing-lg);
+}
+
+.incident-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.incident-section h3 {
+    color: var(--accent-danger);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.2rem;
+}
+
+.chat-log {
+    background-color: var(--tertiary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.message {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    background-color: var(--card-bg);
+}
+
+.message.reported-user {
+    border-left: 4px solid var(--accent-danger);
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.username {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.timestamp {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.message-content {
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.voting-section {
+    text-align: center;
+}
+
+.voting-section h3 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.2rem;
+}
+
+.vote-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.vote-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.vote-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.vote-btn.ok-btn {
+    border-color: var(--accent-success);
+}
+
+.vote-btn.ok-btn:hover {
+    background-color: var(--accent-success);
+    color: white;
+}
+
+.vote-btn.intimidou-btn {
+    border-color: var(--accent-warning);
+}
+
+.vote-btn.intimidou-btn:hover {
+    background-color: var(--accent-warning);
+    color: white;
+}
+
+.vote-btn.grave-btn {
+    border-color: var(--accent-danger);
+}
+
+.vote-btn.grave-btn:hover {
+    background-color: var(--accent-danger);
+    color: white;
+}
+
+.vote-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vote-btn i {
+    font-size: 2rem;
+}
+
+.vote-btn span {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.modal-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--secondary-bg);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    text-align: center;
+}
+
+.vote-confirmation {
+    background-color: var(--accent-success);
+    color: white;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    margin-top: var(--spacing-lg);
+    text-align: center;
+}
+
+.confirmation-content i {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.confirmation-content span {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.confirmation-content p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Mobile Voting Modal */
+@media (max-width: 768px) {
+    .voting-modal {
+        width: 95%;
+        margin: var(--spacing-md);
+    }
+
+    .vote-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .vote-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .modal-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .timer {
+        align-self: center;
+    }
+}

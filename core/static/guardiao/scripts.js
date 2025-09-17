@@ -171,6 +171,8 @@ class VoteSystem {
 class RealTimeUpdates {
     constructor() {
         this.lastCheck = null;
+        this.currentSession = null;
+        this.votingTimer = null;
         this.init();
     }
 
@@ -178,6 +180,8 @@ class RealTimeUpdates {
         // Check for new reports every 5 seconds
         if (window.location.pathname.includes('/dashboard') || window.location.pathname === '/') {
             setInterval(this.checkForUpdates.bind(this), 5000);
+            // Verificar se há denúncia pendente para o Guardião atual
+            this.checkPendingReport();
         }
     }
 
@@ -235,7 +239,7 @@ class RealTimeUpdates {
         document.body.appendChild(notification);
         
         // Auto dismiss after 30 seconds
-        setTimeout(() => {
+            setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
             }
@@ -281,15 +285,244 @@ class RealTimeUpdates {
         }
     }
 
-    formatDateTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+            formatDateTime(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            async checkPendingReport() {
+                try {
+                    // Obter ID do Guardião atual (você precisará implementar isso)
+                    const guardianId = this.getCurrentGuardianId();
+                    if (!guardianId) return;
+
+                    const response = await fetch(`/api/guardian/${guardianId}/pending-report/`);
+                    const data = await response.json();
+
+                    if (data.session_id && !this.currentSession) {
+                        this.currentSession = data;
+                        this.showVotingModal(data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar denúncia pendente:', error);
+                }
+            }
+
+            getCurrentGuardianId() {
+                // Implementar lógica para obter ID do Guardião atual
+                // Por enquanto, retornar null - você precisará implementar isso
+                return null;
+            }
+
+            showVotingModal(sessionData) {
+                // Criar modal de votação
+                const modal = document.createElement('div');
+                modal.className = 'voting-modal-overlay';
+                modal.innerHTML = `
+                    <div class="voting-modal">
+                        <div class="modal-header">
+                            <h2>Um caso de intimidação</h2>
+                            <div class="timer" id="voting-timer">05:00</div>
+                        </div>
+                        
+                        <div class="modal-content">
+                            <div class="incident-section">
+                                <h3>O INCIDENTE</h3>
+                                <div class="chat-log" id="chat-log">
+                                    ${this.renderChatMessages(sessionData.messages)}
+                                </div>
+                            </div>
+                            
+                            <div class="voting-section">
+                                <h3>Como você acha que o usuário se comportou?</h3>
+                                <div class="vote-buttons">
+                                    <button class="vote-btn ok-btn" data-vote="improcedente">
+                                        <i class="fas fa-smile"></i>
+                                        <span>OK</span>
+                                    </button>
+                                    <button class="vote-btn intimidou-btn" data-vote="intimidou">
+                                        <i class="fas fa-meh"></i>
+                                        <span>Intimidou</span>
+                                    </button>
+                                    <button class="vote-btn grave-btn" data-vote="grave">
+                                        <i class="fas fa-angry"></i>
+                                        <span>GRAVE</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" id="leave-session">Sair da Sessão</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                this.startVotingTimer(sessionData.time_remaining);
+                this.setupVotingEventListeners(sessionData);
+            }
+
+            renderChatMessages(messages) {
+                return messages.map(msg => `
+                    <div class="message ${msg.is_reported_user ? 'reported-user' : ''}">
+                        <div class="message-header">
+                            <span class="username">${msg.anonymized_username}</span>
+                            <span class="timestamp">${this.formatDateTime(msg.timestamp)}</span>
+                        </div>
+                        <div class="message-content">${msg.content}</div>
+                    </div>
+                `).join('');
+            }
+
+            startVotingTimer(timeRemaining) {
+                let timeLeft = timeRemaining || 300; // 5 minutos padrão
+                
+                this.votingTimer = setInterval(() => {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    
+                    const timerElement = document.getElementById('voting-timer');
+                    if (timerElement) {
+                        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                    
+                    timeLeft--;
+                    
+                    if (timeLeft < 0) {
+                        this.expireVotingSession();
+                    }
+                }, 1000);
+            }
+
+            setupVotingEventListeners(sessionData) {
+                // Event listeners para botões de voto
+                document.querySelectorAll('.vote-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const voteType = e.currentTarget.dataset.vote;
+                        await this.castVote(sessionData.session_id, voteType);
+                    });
+                });
+
+                // Event listener para sair da sessão
+                document.getElementById('leave-session').addEventListener('click', async () => {
+                    await this.leaveVotingSession(sessionData.session_id);
+                });
+            }
+
+            async castVote(sessionId, voteType) {
+                try {
+                    const guardianId = this.getCurrentGuardianId();
+                    const response = await fetch('/api/session/vote/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            session_id: sessionId,
+                            guardian_id: guardianId,
+                            vote_type: voteType
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showVoteConfirmation(data);
+                        if (data.session_completed) {
+                            this.showFinalDecision(sessionId);
+                        }
+                    } else {
+                        alert('Erro ao registrar voto: ' + data.error);
+                    }
+                } catch (error) {
+                    console.error('Erro ao votar:', error);
+                    alert('Erro ao registrar voto');
+                }
+            }
+
+            showVoteConfirmation(voteData) {
+                // Desabilitar botões de voto
+                document.querySelectorAll('.vote-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('disabled');
+                });
+
+                // Mostrar confirmação
+                const confirmation = document.createElement('div');
+                confirmation.className = 'vote-confirmation';
+                confirmation.innerHTML = `
+                    <div class="confirmation-content">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Voto registrado com sucesso!</span>
+                        <p>Aguardando outros Guardiões votarem... (${voteData.votes_count}/5)</p>
+                    </div>
+                `;
+
+                document.querySelector('.voting-section').appendChild(confirmation);
+            }
+
+            async showFinalDecision(sessionId) {
+                // Implementar lógica para mostrar decisão final
+                // Por enquanto, apenas fechar o modal
+                this.closeVotingModal();
+            }
+
+            async leaveVotingSession(sessionId) {
+                try {
+                    const guardianId = this.getCurrentGuardianId();
+                    const response = await fetch('/api/session/leave/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            session_id: sessionId,
+                            guardian_id: guardianId
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.closeVotingModal();
+                    }
+                } catch (error) {
+                    console.error('Erro ao sair da sessão:', error);
+                }
+            }
+
+            expireVotingSession() {
+                if (this.votingTimer) {
+                    clearInterval(this.votingTimer);
+                }
+                
+                alert('Tempo de votação expirado!');
+                this.closeVotingModal();
+            }
+
+            closeVotingModal() {
+                const modal = document.querySelector('.voting-modal-overlay');
+                if (modal) {
+                    modal.remove();
+                }
+                
+                if (this.votingTimer) {
+                    clearInterval(this.votingTimer);
+                }
+                
+                this.currentSession = null;
+            }
+
+            getCSRFToken() {
+                return document.querySelector('[name=csrfmiddlewaretoken]').value;
     }
 }
 

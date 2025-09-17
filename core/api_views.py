@@ -13,7 +13,7 @@ from django.http import JsonResponse
 import json
 import requests
 import os
-from .models import Guardian, Report, Vote, Message, Appeal
+from .models import Guardian, Report, Vote, Message, Appeal, VotingSession, SessionGuardian, ReportQueue
 from .serializers import ReportSerializer, VoteSerializer, GuardianSerializer
 
 
@@ -429,3 +429,258 @@ def notify_bot_apply_punishment(report):
         
     except Exception as e:
         print(f"Erro ao notificar bot sobre punição: {e}")
+
+
+# ===== NOVOS ENDPOINTS PARA SISTEMA DE FILA E MODAL =====
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_pending_report_for_guardian(request, guardian_id):
+    """
+    Endpoint para obter a próxima denúncia pendente para um Guardião
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Verificar se o Guardião está online
+        try:
+            guardian = Guardian.objects.get(discord_id=guardian_id, status='online')
+        except Guardian.DoesNotExist:
+            return Response({'error': 'Guardião não encontrado ou offline'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verificar se já está em uma sessão ativa
+        active_session = SessionGuardian.objects.filter(
+            guardian=guardian,
+            is_active=True,
+            has_voted=False
+        ).first()
+        
+        if active_session:
+            # Retornar a sessão atual
+            session_data = {
+                'session_id': str(active_session.session.id),
+                'report_id': active_session.session.report.id,
+                'report': {
+                    'id': active_session.session.report.id,
+                    'reason': active_session.session.report.reason,
+                    'reported_user_id': active_session.session.report.reported_user_id,
+                    'reporter_user_id': active_session.session.report.reporter_user_id,
+                    'created_at': active_session.session.report.created_at.isoformat(),
+                },
+                'messages': [],
+                'voting_deadline': active_session.session.voting_deadline.isoformat() if active_session.session.voting_deadline else None,
+                'time_remaining': None
+            }
+            
+            # Calcular tempo restante
+            if active_session.session.voting_deadline:
+                remaining = active_session.session.voting_deadline - timezone.now()
+                session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
+            
+            # Buscar mensagens da denúncia
+            messages = Message.objects.filter(report=active_session.session.report).order_by('timestamp')
+            session_data['messages'] = [
+                {
+                    'id': msg.id,
+                    'original_user_id': msg.original_user_id,
+                    'anonymized_username': msg.anonymized_username,
+                    'content': msg.content,
+                    'timestamp': msg.timestamp.isoformat(),
+                    'is_reported_user': msg.is_reported_user
+                }
+                for msg in messages
+            ]
+            
+            return Response(session_data)
+        
+        # Buscar próxima denúncia na fila
+        queue_item = ReportQueue.objects.filter(
+            status='pending'
+        ).order_by('-priority', 'created_at').first()
+        
+        if not queue_item:
+            return Response({'message': 'Nenhuma denúncia pendente na fila'})
+        
+        # Criar nova sessão de votação
+        session = VotingSession.objects.create(
+            report=queue_item.report,
+            status='waiting',
+            voting_deadline=timezone.now() + timedelta(minutes=5)
+        )
+        
+        # Adicionar Guardião à sessão
+        SessionGuardian.objects.create(
+            session=session,
+            guardian=guardian,
+            is_active=True
+        )
+        
+        # Atualizar status da fila
+        queue_item.status = 'assigned'
+        queue_item.assigned_at = timezone.now()
+        queue_item.save()
+        
+        # Atualizar status da sessão
+        session.status = 'voting'
+        session.started_at = timezone.now()
+        session.save()
+        
+        # Retornar dados da sessão
+        session_data = {
+            'session_id': str(session.id),
+            'report_id': session.report.id,
+            'report': {
+                'id': session.report.id,
+                'reason': session.report.reason,
+                'reported_user_id': session.report.reported_user_id,
+                'reporter_user_id': session.report.reporter_user_id,
+                'created_at': session.report.created_at.isoformat(),
+            },
+            'messages': [],
+            'voting_deadline': session.voting_deadline.isoformat(),
+            'time_remaining': 300  # 5 minutos em segundos
+        }
+        
+        # Buscar mensagens da denúncia
+        messages = Message.objects.filter(report=session.report).order_by('timestamp')
+        session_data['messages'] = [
+            {
+                'id': msg.id,
+                'original_user_id': msg.original_user_id,
+                'anonymized_username': msg.anonymized_username,
+                'content': msg.content,
+                'timestamp': msg.timestamp.isoformat(),
+                'is_reported_user': msg.is_reported_user
+            }
+            for msg in messages
+        ]
+        
+        return Response(session_data)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao obter denúncia pendente: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def cast_vote_in_session(request):
+    """
+    Endpoint para registrar voto em uma sessão de votação
+    """
+    try:
+        from django.utils import timezone
+        
+        data = request.data
+        
+        # Validar dados
+        required_fields = ['session_id', 'guardian_id', 'vote_type']
+        for field in required_fields:
+            if field not in data:
+                return Response(
+                    {'error': f'Campo obrigatório ausente: {field}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Verificar se o voto é válido
+        if data['vote_type'] not in ['improcedente', 'intimidou', 'grave']:
+            return Response(
+                {'error': 'Tipo de voto inválido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Buscar sessão e Guardião
+        try:
+            session = VotingSession.objects.get(id=data['session_id'])
+            guardian = Guardian.objects.get(discord_id=data['guardian_id'])
+            session_guardian = SessionGuardian.objects.get(
+                session=session,
+                guardian=guardian,
+                is_active=True
+            )
+        except (VotingSession.DoesNotExist, Guardian.DoesNotExist, SessionGuardian.DoesNotExist):
+            return Response(
+                {'error': 'Sessão ou Guardião não encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Verificar se já votou
+        if session_guardian.has_voted:
+            return Response(
+                {'error': 'Você já votou nesta sessão'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verificar se a sessão expirou
+        if session.is_expired():
+            return Response(
+                {'error': 'Tempo de votação expirado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Registrar voto
+        session_guardian.has_voted = True
+        session_guardian.vote_type = data['vote_type']
+        session_guardian.voted_at = timezone.now()
+        session_guardian.save()
+        
+        # Criar voto no sistema antigo (para compatibilidade)
+        Vote.objects.create(
+            report=session.report,
+            guardian=guardian,
+            vote_type=data['vote_type']
+        )
+        
+        # Atualizar contadores da denúncia
+        report = session.report
+        if data['vote_type'] == 'improcedente':
+            report.votes_improcedente += 1
+        elif data['vote_type'] == 'intimidou':
+            report.votes_intimidou += 1
+        elif data['vote_type'] == 'grave':
+            report.votes_grave += 1
+        
+        report.total_votes += 1
+        report.status = 'voting'
+        report.save()
+        
+        # Verificar se todos os Guardiões ativos votaram
+        active_guardians = session.get_active_guardians()
+        voted_guardians = active_guardians.filter(has_voted=True)
+        
+        if voted_guardians.count() >= 5:
+            # Concluir sessão
+            session.status = 'completed'
+            session.completed_at = timezone.now()
+            session.save()
+            
+            # Concluir denúncia
+            report.status = 'completed'
+            report.punishment = report.calculate_punishment()
+            report.save()
+            
+            # Atualizar fila
+            queue_item = ReportQueue.objects.get(report=report)
+            queue_item.status = 'completed'
+            queue_item.completed_at = timezone.now()
+            queue_item.save()
+            
+            # Notificar bot para aplicar punição
+            notify_bot_apply_punishment(report)
+        
+        return Response({
+            'success': True,
+            'message': 'Voto registrado com sucesso',
+            'session_completed': session.status == 'completed',
+            'votes_count': voted_guardians.count(),
+            'total_active_guardians': active_guardians.count()
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao registrar voto: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
