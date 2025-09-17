@@ -120,7 +120,32 @@ def test_postgresql_connection(max_retries=10, delay=2):
                 '127.0.0.1',  # Local IP
                 '172.17.0.1',  # Docker bridge IP
                 '172.18.0.1',  # Alternative Docker IP
+                '172.19.0.1',  # Another Docker IP
+                '172.20.0.1',  # Another Docker IP
             ]
+            
+            # Debug: Check if PostgreSQL process is running
+            print("🔍 Checking PostgreSQL process...")
+            import subprocess
+            try:
+                result = subprocess.run(['ps', 'aux'], capture_output=True, text=True, timeout=5)
+                if 'postgres' in result.stdout.lower():
+                    print("✅ PostgreSQL process found!")
+                else:
+                    print("❌ PostgreSQL process not found")
+            except Exception as e:
+                print(f"❌ Error checking processes: {e}")
+            
+            # Debug: Check network interfaces
+            print("🔍 Checking network interfaces...")
+            try:
+                result = subprocess.run(['ip', 'addr'], capture_output=True, text=True, timeout=5)
+                print("Network interfaces:")
+                for line in result.stdout.split('\n'):
+                    if 'inet' in line and '127.0.0.1' not in line:
+                        print(f"  {line.strip()}")
+            except Exception as e:
+                print(f"❌ Error checking network: {e}")
             
             # Test each alternative host
             working_host = None
