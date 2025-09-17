@@ -98,20 +98,62 @@ print(f"DB_HOST: {os.getenv('DB_HOST', 'postgresql')}")
 print(f"DB_PORT: {os.getenv('DB_PORT', '5432')}")
 print("=====================================")
 
-# Try to connect to PostgreSQL, fallback to SQLite if not available
-try:
-    import psycopg2
-    # Test connection
-    conn = psycopg2.connect(
-        host=os.getenv('DB_HOST', 'postgresql'),
-        port=os.getenv('DB_PORT', '5432'),
-        user=os.getenv('DB_USER', 'guardiao'),
-        password=os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
-        database=os.getenv('DB_NAME', 'guardiaodatabase')
-    )
-    conn.close()
-    print("✅ PostgreSQL connection successful!")
+# Try to connect to PostgreSQL with retry mechanism
+import time
+import socket
+
+def test_postgresql_connection(max_retries=10, delay=2):
+    """Test PostgreSQL connection with retry mechanism"""
+    for attempt in range(max_retries):
+        try:
+            print(f"🔄 Attempting PostgreSQL connection (attempt {attempt + 1}/{max_retries})...")
+            
+            # First test if host is reachable
+            host = os.getenv('DB_HOST', 'postgresql')
+            port = int(os.getenv('DB_PORT', '5432'))
+            
+            # Test socket connection
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result != 0:
+                print(f"❌ Host {host}:{port} not reachable (attempt {attempt + 1})")
+                if attempt < max_retries - 1:
+                    print(f"⏳ Waiting {delay} seconds before retry...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    return False
+            
+            # Test PostgreSQL connection
+            import psycopg2
+            conn = psycopg2.connect(
+                host=host,
+                port=port,
+                user=os.getenv('DB_USER', 'guardiao'),
+                password=os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
+                database=os.getenv('DB_NAME', 'guardiaodatabase'),
+                connect_timeout=10
+            )
+            conn.close()
+            print("✅ PostgreSQL connection successful!")
+            return True
+            
+        except Exception as e:
+            print(f"❌ PostgreSQL connection failed (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"⏳ Waiting {delay} seconds before retry...")
+                time.sleep(delay)
+            else:
+                return False
     
+    return False
+
+# Test PostgreSQL connection
+if test_postgresql_connection():
+    print("🎯 Using PostgreSQL database")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -120,12 +162,13 @@ try:
             "PASSWORD": os.getenv('DB_PASSWORD', 'PasswordGuardiaoAdmin2025!'),
             "HOST": os.getenv('DB_HOST', 'postgresql'),
             "PORT": os.getenv('DB_PORT', '5432'),
+            "OPTIONS": {
+                'connect_timeout': 10,
+            }
         }
     }
-except Exception as e:
-    print(f"❌ PostgreSQL connection failed: {e}")
-    print("🔄 Falling back to SQLite for development...")
-    
+else:
+    print("🔄 PostgreSQL not available, falling back to SQLite...")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
