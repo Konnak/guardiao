@@ -139,7 +139,9 @@ class GuardiaoBot(commands.Bot):
     
     async def create_guardian_profile(self, user: discord.User) -> Guardian:
         """Cria um perfil de Guardião para um usuário"""
-        guardian, created = Guardian.objects.get_or_create(
+        from asgiref.sync import sync_to_async
+        
+        guardian, created = await sync_to_async(Guardian.objects.get_or_create)(
             discord_id=user.id,
             defaults={
                 'discord_username': user.name,
@@ -153,13 +155,15 @@ class GuardiaoBot(commands.Bot):
             guardian.discord_username = user.name
             guardian.discord_display_name = user.display_name or user.name
             guardian.avatar_url = str(user.avatar.url) if user.avatar else None
-            guardian.save()
+            await sync_to_async(guardian.save)()
         
         return guardian
     
     async def send_notification_to_guardians(self, report: Report):
         """Envia notificação para todos os Guardiões em serviço"""
-        online_guardians = Guardian.objects.filter(status='online')
+        from asgiref.sync import sync_to_async
+        
+        online_guardians = await sync_to_async(list)(Guardian.objects.filter(status='online'))
         
         for guardian in online_guardians:
             try:
@@ -332,7 +336,9 @@ async def report_command(
         recent_messages = bot.message_cache.get_recent_messages(interaction.channel.id, 50)
         
         # Criar denúncia no banco de dados
-        report = Report.objects.create(
+        from asgiref.sync import sync_to_async
+        
+        report = await sync_to_async(Report.objects.create)(
             guild_id=interaction.guild.id,
             channel_id=interaction.channel.id,
             reported_user_id=usuario.id,
@@ -358,7 +364,7 @@ async def report_command(
                     user_mapping[msg.author.id] = f"Usuário {user_counter}"
                     user_counter += 1
             
-            Message.objects.create(
+            await sync_to_async(Message.objects.create)(
                 report=report,
                 original_user_id=msg.author.id,
                 original_message_id=msg.id,
@@ -447,10 +453,12 @@ async def info_command(interaction: discord.Interaction):
     
     try:
         # Estatísticas do sistema
-        total_reports = Report.objects.count()
-        total_guardians = Guardian.objects.count()
-        online_guardians = Guardian.objects.filter(status='online').count()
-        pending_reports = Report.objects.filter(status='pending').count()
+        from asgiref.sync import sync_to_async
+        
+        total_reports = await sync_to_async(Report.objects.count)()
+        total_guardians = await sync_to_async(Guardian.objects.count)()
+        online_guardians = await sync_to_async(Guardian.objects.filter(status='online').count)()
+        pending_reports = await sync_to_async(Report.objects.filter(status='pending').count)()
         
         embed = discord.Embed(
             title="🛡️ Sistema Guardião",
