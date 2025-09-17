@@ -82,7 +82,7 @@ def discord_callback(request):
             discord_id=user_data['id'],
             defaults={
                 'discord_username': user_data['username'],
-                'discord_display_name': user_data['display_name'] or user_data['username'],
+                'discord_display_name': user_data.get('display_name') or user_data['username'],
                 'avatar_url': f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None,
             }
         )
@@ -90,7 +90,7 @@ def discord_callback(request):
         if not created:
             # Atualizar informações
             guardian.discord_username = user_data['username']
-            guardian.discord_display_name = user_data['display_name'] or user_data['username']
+            guardian.discord_display_name = user_data.get('display_name') or user_data['username']
             guardian.avatar_url = f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None
             guardian.save()
         
