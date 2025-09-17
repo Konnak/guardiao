@@ -5,8 +5,7 @@ Script para iniciar o servidor Django e bot Discord na Discloud
 import os
 import sys
 import django
-import asyncio
-import threading
+import subprocess
 import time
 from django.core.management import execute_from_command_line
 
@@ -49,47 +48,44 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-def run_django_server():
-    """Executa o servidor Django"""
-    try:
-        print("🌐 Iniciando servidor Django na porta 8080...")
-        execute_from_command_line(['start_server.py', 'runserver', '0.0.0.0:8080'])
-    except Exception as e:
-        print(f"❌ Erro ao iniciar servidor Django: {e}")
-        import traceback
-        traceback.print_exc()
-
 def run_discord_bot():
-    """Executa o bot Discord"""
+    """Executa o bot Discord em subprocess"""
     try:
         print("🤖 Iniciando bot Discord...")
         # Aguardar um pouco para o Django inicializar
         time.sleep(5)
         
-        # Importar e executar o bot
-        from bot.discord_bot import main
-        asyncio.run(main())
+        # Executar bot Discord usando script separado
+        bot_process = subprocess.Popen([sys.executable, 'run_bot.py'])
+        
+        print("✅ Bot Discord iniciado em subprocess")
+        return bot_process
     except Exception as e:
         print(f"❌ Erro ao iniciar bot Discord: {e}")
         import traceback
         traceback.print_exc()
+        return None
 
-# Iniciar Django e Discord Bot em threads separadas
+# Iniciar bot Discord em subprocess primeiro
 print("🚀 Iniciando Sistema Guardião completo...")
 print("=" * 60)
 
-# Thread para Django
-django_thread = threading.Thread(target=run_django_server, daemon=True)
-django_thread.start()
+bot_process = run_discord_bot()
 
-# Thread para Discord Bot
-bot_thread = threading.Thread(target=run_discord_bot, daemon=True)
-bot_thread.start()
-
-# Aguardar threads
+# Executar servidor Django na thread principal
 try:
-    django_thread.join()
-    bot_thread.join()
+    print("🌐 Iniciando servidor Django na porta 8080...")
+    print("=" * 60)
+    execute_from_command_line(['start_server.py', 'runserver', '0.0.0.0:8080'])
 except KeyboardInterrupt:
     print("\n🛑 Sistema Guardião interrompido pelo usuário")
+    if bot_process:
+        bot_process.terminate()
     sys.exit(0)
+except Exception as e:
+    print(f"❌ Erro ao iniciar servidor Django: {e}")
+    import traceback
+    traceback.print_exc()
+    if bot_process:
+        bot_process.terminate()
+    sys.exit(1)
