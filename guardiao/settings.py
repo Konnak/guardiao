@@ -294,7 +294,6 @@ STATICFILES_DIRS = [
 
 # Static files finders
 STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
