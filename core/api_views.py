@@ -269,6 +269,7 @@ def get_report_details(request, report_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def update_guardian_status(request):
     """
     Endpoint para atualizar status do Guardião
