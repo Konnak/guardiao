@@ -686,6 +686,12 @@ def get_pending_report_for_guardian(request, guardian_id):
             print(f"🔍 SessionGuardian - created: {created}, id: {session_guardian.id if session_guardian else 'None'}")
             
             if not created:
+                # Se já existe mas está inativo, reativar
+                if not session_guardian.is_active:
+                    session_guardian.is_active = True
+                    session_guardian.left_at = None
+                    session_guardian.save()
+                    print(f"🔄 SessionGuardian reativada: {session_guardian.id}")
                 # Retornar dados da sessão mesmo se já estiver participando
                 session_data = {
                     'session_id': str(existing_session.id),
@@ -946,27 +952,21 @@ def cast_vote_in_session(request):
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
             print(f"✅ cast_vote_in_session - Guardião encontrado: {guardian.discord_username}")
             
-            # Primeiro, buscar sem filtro is_active para ver o que existe
-            try:
-                session_guardian_all = SessionGuardian.objects.get(
-                    session=session,
-                    guardian=guardian
-                )
-                print(f"🔍 cast_vote_in_session - SessionGuardian encontrada (sem filtro): id={session_guardian_all.id}, is_active={session_guardian_all.is_active}")
-            except SessionGuardian.DoesNotExist:
-                print(f"❌ cast_vote_in_session - Nenhuma SessionGuardian encontrada para sessão {session.id} e guardião {guardian.id}")
-                return Response(
-                    {'error': 'Sessão de Guardião não encontrada'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Agora buscar com filtro is_active=True
-            session_guardian = SessionGuardian.objects.get(
+            # Buscar ou criar SessionGuardian
+            session_guardian, created = SessionGuardian.objects.get_or_create(
                 session=session,
                 guardian=guardian,
-                is_active=True
+                defaults={'is_active': True}
             )
-            print(f"✅ cast_vote_in_session - SessionGuardian encontrada: {session_guardian.id}")
+            
+            print(f"🔍 cast_vote_in_session - SessionGuardian: id={session_guardian.id}, is_active={session_guardian.is_active}, created={created}")
+            
+            # Se não foi criada agora, garantir que está ativa
+            if not created and not session_guardian.is_active:
+                session_guardian.is_active = True
+                session_guardian.left_at = None
+                session_guardian.save()
+                print(f"🔄 SessionGuardian reativada: {session_guardian.id}")
             
         except VotingSession.DoesNotExist:
             print(f"❌ cast_vote_in_session - VotingSession não encontrada: {data['session_id']}")
@@ -978,12 +978,6 @@ def cast_vote_in_session(request):
             print(f"❌ cast_vote_in_session - Guardian não encontrado: {data['guardian_id']}")
             return Response(
                 {'error': 'Guardião não encontrado'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except SessionGuardian.DoesNotExist:
-            print(f"❌ cast_vote_in_session - SessionGuardian não encontrada para sessão {data['session_id']} e guardião {data['guardian_id']}")
-            return Response(
-                {'error': 'Sessão de Guardião não encontrada'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
@@ -1000,6 +994,13 @@ def cast_vote_in_session(request):
                 {'error': 'Tempo de votação expirado'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Garantir que SessionGuardian está ativo antes de votar
+        if not session_guardian.is_active:
+            session_guardian.is_active = True
+            session_guardian.left_at = None
+            session_guardian.save()
+            print(f"🔄 SessionGuardian reativada antes do voto: {session_guardian.id}")
         
         # Registrar voto
         session_guardian.has_voted = True
