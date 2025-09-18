@@ -177,7 +177,15 @@ class RealTimeUpdates {
                 this.currentSession = null;
                 this.votingTimer = null;
                 this.lastNotificationTime = 0; // Para cooldown de notificação
+        this.clearOldLocalStorage();
         this.init();
+    }
+    
+    // Limpar localStorage antigo ao inicializar
+    clearOldLocalStorage() {
+        console.log('🧹 Limpando localStorage antigo...');
+        localStorage.removeItem('guardian_discord_id');
+        console.log('✅ localStorage limpo');
     }
 
             init() {
@@ -401,6 +409,8 @@ class RealTimeUpdates {
                         const sessionData = await sessionResponse.json();
                         if (sessionData.authenticated && sessionData.guardian_id) {
                             console.log('✅ ID encontrado na sessão atual:', sessionData.guardian_id);
+                            // Limpar localStorage antigo e definir o correto
+                            localStorage.removeItem('guardian_discord_id');
                             localStorage.setItem('guardian_discord_id', sessionData.guardian_id);
                             return parseInt(sessionData.guardian_id);
                         }
