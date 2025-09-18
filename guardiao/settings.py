@@ -32,11 +32,20 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = [
+    'https://guardiao.discloud.app',
+    'https://discloud.app',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+]
+
 # Debug Django configuration
 print("=== DJANGO CONFIGURATION DEBUG ===")
 print(f"SECRET_KEY: {'SET' if os.getenv('SECRET_KEY') else 'NOT SET'}")
 print(f"DEBUG: {DEBUG}")
 print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+print(f"CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 print("===================================")
 
 
