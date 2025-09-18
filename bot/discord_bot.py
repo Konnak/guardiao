@@ -22,7 +22,7 @@ try:
 except Exception as e:
     print(f"Erro ao configurar Django: {e}")
 
-from core.models import Guardian, Report, Message
+from core.models import Guardian, Report, Message, ReportQueue
 
 
 class MessageCache:
@@ -324,9 +324,9 @@ async def report_command(
     motivo: str = "Violação das regras do servidor"
 ):
     """Comando slash para reportar usuários"""
-    await interaction.response.defer(ephemeral=True)
-    
     try:
+        # Deferir resposta imediatamente para evitar timeout
+        await interaction.response.defer(ephemeral=True)
         # Verificar se o usuário não está se reportando
         if usuario.id == interaction.user.id:
             await interaction.followup.send("❌ Você não pode se reportar!", ephemeral=True)
