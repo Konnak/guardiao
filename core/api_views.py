@@ -925,6 +925,10 @@ def leave_voting_session(request):
         
         # Buscar sessão e Guardião
         try:
+            print(f"🔍 leave_voting_session - Dados recebidos: {data}")
+            print(f"🔍 leave_voting_session - session_id: {data.get('session_id')}")
+            print(f"🔍 leave_voting_session - guardian_id: {data.get('guardian_id')}")
+            
             session = VotingSession.objects.get(id=data['session_id'])
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
             session_guardian = SessionGuardian.objects.get(
@@ -932,7 +936,11 @@ def leave_voting_session(request):
                 guardian=guardian,
                 is_active=True
             )
-        except (VotingSession.DoesNotExist, Guardian.DoesNotExist, SessionGuardian.DoesNotExist):
+            print(f"🔍 leave_voting_session - Sessão encontrada: {session.id}")
+            print(f"🔍 leave_voting_session - Guardião encontrado: {guardian.discord_display_name}")
+            print(f"🔍 leave_voting_session - SessionGuardian encontrado: {session_guardian.id}")
+        except (VotingSession.DoesNotExist, Guardian.DoesNotExist, SessionGuardian.DoesNotExist) as e:
+            print(f"❌ leave_voting_session - Erro ao buscar: {e}")
             return Response(
                 {'error': 'Sessão ou Guardião não encontrado'},
                 status=status.HTTP_404_NOT_FOUND

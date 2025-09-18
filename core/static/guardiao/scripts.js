@@ -834,7 +834,15 @@ class RealTimeUpdates {
 
             async leaveVotingSession(sessionId) {
                 try {
-                    const guardianId = this.getCurrentGuardianId();
+                    const guardianId = await this.getCurrentGuardianId();
+                    console.log('🔍 guardianId obtido para sair da sessão:', guardianId);
+                    console.log('🔍 Tipo do guardianId:', typeof guardianId);
+                    
+                    if (!guardianId) {
+                        alert('Erro: ID do Guardião não encontrado. Faça login novamente.');
+                        return;
+                    }
+                    
                     const response = await fetch('/api/session/leave/', {
                         method: 'POST',
                         headers: {
@@ -848,11 +856,16 @@ class RealTimeUpdates {
                     });
 
                     const data = await response.json();
+                    console.log('🔍 Resposta da API leave:', data);
+                    
                     if (data.success) {
                         this.closeVotingModal();
+                    } else {
+                        alert('Erro ao sair da sessão: ' + (data.error || 'Erro desconhecido'));
                     }
                 } catch (error) {
                     console.error('Erro ao sair da sessão:', error);
+                    alert('Erro ao sair da sessão: ' + error.message);
                 }
             }
 
