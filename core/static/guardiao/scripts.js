@@ -717,7 +717,15 @@ class RealTimeUpdates {
 
             async castVote(sessionId, voteType) {
                 try {
-                    const guardianId = this.getCurrentGuardianId();
+                    const guardianId = await this.getCurrentGuardianId();
+                    console.log('🔍 guardianId obtido para voto:', guardianId);
+                    console.log('🔍 Tipo do guardianId:', typeof guardianId);
+                    
+                    if (!guardianId) {
+                        alert('Erro: ID do Guardião não encontrado. Faça login novamente.');
+                        return;
+                    }
+                    
                     const response = await fetch('/api/session/vote/', {
                         method: 'POST',
                         headers: {

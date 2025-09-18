@@ -804,6 +804,11 @@ def cast_vote_in_session(request):
         
         # Buscar sessão e Guardião
         try:
+            print(f"🔍 cast_vote_in_session - Dados recebidos: {data}")
+            print(f"🔍 cast_vote_in_session - session_id: {data.get('session_id')}")
+            print(f"🔍 cast_vote_in_session - guardian_id: {data.get('guardian_id')}")
+            print(f"🔍 cast_vote_in_session - vote_type: {data.get('vote_type')}")
+            
             session = VotingSession.objects.get(id=data['session_id'])
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
             session_guardian = SessionGuardian.objects.get(
