@@ -940,15 +940,34 @@ def cast_vote_in_session(request):
             print(f"🔍 cast_vote_in_session - vote_type: {data.get('vote_type')}")
             
             session = VotingSession.objects.get(id=data['session_id'])
+            print(f"✅ cast_vote_in_session - Sessão encontrada: {session.id}")
+            
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
+            print(f"✅ cast_vote_in_session - Guardião encontrado: {guardian.username}")
+            
             session_guardian = SessionGuardian.objects.get(
                 session=session,
                 guardian=guardian,
                 is_active=True
             )
-        except (VotingSession.DoesNotExist, Guardian.DoesNotExist, SessionGuardian.DoesNotExist):
+            print(f"✅ cast_vote_in_session - SessionGuardian encontrada: {session_guardian.id}")
+            
+        except VotingSession.DoesNotExist:
+            print(f"❌ cast_vote_in_session - VotingSession não encontrada: {data['session_id']}")
             return Response(
-                {'error': 'Sessão ou Guardião não encontrado'},
+                {'error': 'Sessão não encontrada'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Guardian.DoesNotExist:
+            print(f"❌ cast_vote_in_session - Guardian não encontrado: {data['guardian_id']}")
+            return Response(
+                {'error': 'Guardião não encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except SessionGuardian.DoesNotExist:
+            print(f"❌ cast_vote_in_session - SessionGuardian não encontrada para sessão {data['session_id']} e guardião {data['guardian_id']}")
+            return Response(
+                {'error': 'Sessão de Guardião não encontrada'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
