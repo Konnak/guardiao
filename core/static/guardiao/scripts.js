@@ -391,11 +391,10 @@ class RealTimeUpdates {
                 console.log('🔍 window.GUARDIAN_DISCORD_ID:', window.GUARDIAN_DISCORD_ID);
                 console.log('🔍 localStorage guardian_discord_id:', localStorage.getItem('guardian_discord_id'));
                 
-                // 1. Verificar variável global (mais confiável)
+                // 1. Verificar variável global (desabilitado - pode estar incorreta)
                 if (window.GUARDIAN_DISCORD_ID) {
-                    console.log('✅ ID encontrado na variável global:', window.GUARDIAN_DISCORD_ID);
-                    localStorage.setItem('guardian_discord_id', window.GUARDIAN_DISCORD_ID);
-                    return parseInt(window.GUARDIAN_DISCORD_ID);
+                    console.log('⚠️ Variável global encontrada mas ignorada:', window.GUARDIAN_DISCORD_ID);
+                    console.log('🔄 Usando sessão atual em vez da variável global');
                 }
                 
                 // 2. Obter ID da sessão atual (mais confiável que localStorage)
