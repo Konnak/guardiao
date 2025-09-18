@@ -404,11 +404,14 @@ class RealTimeUpdates {
                         credentials: 'include'
                     });
                     
-                    if (sessionResponse.ok) {
-                        const sessionData = await sessionResponse.json();
-                        console.log('🔍 Dados da sessão recebidos:', sessionData);
-                        console.log('🔍 sessionData.authenticated:', sessionData.authenticated);
-                        console.log('🔍 sessionData.guardian_id:', sessionData.guardian_id);
+           if (sessionResponse.ok) {
+               const responseText = await sessionResponse.text();
+               console.log('🔍 Resposta bruta da API:', responseText);
+               const sessionData = JSON.parse(responseText);
+               console.log('🔍 Dados da sessão recebidos:', sessionData);
+               console.log('🔍 sessionData.authenticated:', sessionData.authenticated);
+               console.log('🔍 sessionData.guardian_id:', sessionData.guardian_id);
+               console.log('🔍 Tipo do guardian_id:', typeof sessionData.guardian_id);
                         
                         if (sessionData.authenticated && sessionData.guardian_id) {
                             console.log('✅ ID encontrado na sessão atual:', sessionData.guardian_id);
