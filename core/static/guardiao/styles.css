@@ -1222,7 +1222,74 @@ body {
     }
 }
 
-/* Voting Modal Styles */
+/* Notification Popup Styles */
+.notification-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-popup {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 400px;
+    width: 90%;
+    border: 2px solid var(--accent-warning);
+}
+
+.notification-header {
+    background-color: var(--accent-warning);
+    color: white;
+    padding: 1rem;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-header i {
+    font-size: 1.5rem;
+}
+
+.notification-content {
+    padding: 1.5rem;
+}
+
+.notification-details {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+.report-id {
+    display: block;
+    font-weight: bold;
+    color: var(--accent-primary);
+    margin-bottom: 0.5rem;
+}
+
+.reason {
+    display: block;
+    color: var(--text-secondary);
+}
+
+.notification-actions {
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/* New Voting Modal Styles */
 .voting-modal-overlay {
     position: fixed;
     top: 0;
@@ -1236,14 +1303,16 @@ body {
     justify-content: center;
 }
 
-.voting-modal {
+.voting-modal-new {
     background-color: var(--card-bg);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-xl);
-    max-width: 800px;
-    width: 90%;
+    max-width: 1000px;
+    width: 95%;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -1466,5 +1535,278 @@ body {
 
     .timer {
         align-self: center;
+    }
+}
+
+/* New Modal Styles */
+.modal-header-new {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+}
+
+.modal-header-new h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+.timer-new {
+    background-color: var(--accent-danger);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+.modal-content-new {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.left-panel {
+    flex: 2;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.right-panel {
+    flex: 1;
+    background-color: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.incident-section-new {
+    margin-bottom: 2rem;
+}
+
+.incident-section-new h3 {
+    color: var(--accent-danger);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.chat-log-new {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.message-new {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    background-color: var(--card-bg);
+}
+
+.message-new.reported-user-new {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--accent-danger);
+}
+
+.message-header-new {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.username-new {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.timestamp-new {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.message-content-new {
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.voting-section-new {
+    margin-top: 2rem;
+}
+
+.voting-section-new h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+}
+
+.vote-buttons-new {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.vote-btn-new {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background-color: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.vote-btn-new:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.vote-btn-new.ok-btn-new:hover {
+    border-color: var(--accent-success);
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.vote-btn-new.intimidou-btn-new:hover {
+    border-color: var(--accent-warning);
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.vote-btn-new.grave-btn-new:hover {
+    border-color: var(--accent-danger);
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.vote-btn-new.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vote-icon {
+    font-size: 2rem;
+}
+
+.guardians-section h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+}
+
+.guardians-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.guardian-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.guardian-item.current-guardian {
+    border-color: var(--accent-primary);
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.guardian-item.voted-guardian {
+    border-color: var(--accent-success);
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.guardian-avatar {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-secondary);
+    border-radius: 50%;
+}
+
+.guardian-info {
+    flex: 1;
+}
+
+.guardian-name {
+    display: block;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.guardian-status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.guardian-vote {
+    font-size: 1.5rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.vote-confirmation-new {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(40, 167, 69, 0.1);
+    border: 1px solid var(--accent-success);
+    border-radius: var(--border-radius);
+}
+
+.confirmation-content-new {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent-success);
+}
+
+.modal-footer-new {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Responsive adjustments for new modal */
+@media (max-width: 768px) {
+    .voting-modal-new {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .modal-content-new {
+        flex-direction: column;
+    }
+    
+    .right-panel {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .vote-buttons-new {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .vote-btn-new {
+        width: 100%;
     }
 }

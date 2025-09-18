@@ -320,6 +320,8 @@ class RealTimeUpdates {
 
                     if (!statusData.is_online) {
                         console.log('⏸️ Guardião offline - não verificando denúncias pendentes');
+                        // Fechar modal se estiver aberto
+                        this.closeVotingModal();
                         return;
                     }
 
@@ -333,7 +335,7 @@ class RealTimeUpdates {
                     if (data.session_id && !this.currentSession) {
                         console.log('🎯 Nova sessão encontrada:', data.session_id);
                         this.currentSession = data;
-                        this.showVotingModal(data);
+                        this.showNotificationPopup(data);
                     } else if (data.message) {
                         console.log('ℹ️', data.message);
                     } else if (data.error) {
@@ -399,48 +401,123 @@ class RealTimeUpdates {
                 return null;
             }
 
+            showNotificationPopup(sessionData) {
+                // Criar pop-up de notificação
+                const notification = document.createElement('div');
+                notification.className = 'notification-popup-overlay';
+                notification.innerHTML = `
+                    <div class="notification-popup">
+                        <div class="notification-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Nova Denúncia Recebida!</h3>
+                        </div>
+                        <div class="notification-content">
+                            <p>Uma nova denúncia está aguardando sua análise.</p>
+                            <div class="notification-details">
+                                <span class="report-id">Denúncia #${sessionData.report_id}</span>
+                                <span class="reason">${sessionData.report.reason}</span>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-secondary" id="dismiss-notification">
+                                <i class="fas fa-times"></i>
+                                Dispensar
+                            </button>
+                            <button class="btn btn-primary" id="enter-session">
+                                <i class="fas fa-play"></i>
+                                Entrar
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(notification);
+                
+                // Event listeners
+                document.getElementById('dismiss-notification').addEventListener('click', () => {
+                    this.dismissNotification();
+                });
+                
+                document.getElementById('enter-session').addEventListener('click', () => {
+                    this.enterVotingSession(sessionData);
+                });
+                
+                // Tocar som de notificação
+                this.playNotificationSound();
+            }
+
+            dismissNotification() {
+                const notification = document.querySelector('.notification-popup-overlay');
+                if (notification) {
+                    notification.remove();
+                }
+                this.currentSession = null;
+            }
+
+            enterVotingSession(sessionData) {
+                // Remover pop-up de notificação
+                const notification = document.querySelector('.notification-popup-overlay');
+                if (notification) {
+                    notification.remove();
+                }
+                
+                // Mostrar modal de votação
+                this.showVotingModal(sessionData);
+            }
+
             showVotingModal(sessionData) {
-                // Criar modal de votação
+                // Criar modal de votação igual à imagem
                 const modal = document.createElement('div');
                 modal.className = 'voting-modal-overlay';
                 modal.innerHTML = `
-                    <div class="voting-modal">
+                    <div class="voting-modal-new">
                         <!-- Token CSRF para o modal -->
                         <input type="hidden" name="csrfmiddlewaretoken" value="${this.getCSRFToken()}">
                         
-                        <div class="modal-header">
+                        <div class="modal-header-new">
                             <h2>Um caso de intimidação</h2>
-                            <div class="timer" id="voting-timer">05:00</div>
+                            <div class="timer-new" id="voting-timer">05:00</div>
                         </div>
                         
-                        <div class="modal-content">
-                            <div class="incident-section">
-                                <h3>O INCIDENTE</h3>
-                                <div class="chat-log" id="chat-log">
-                                    ${this.renderChatMessages(sessionData.messages)}
+                        <div class="modal-content-new">
+                            <div class="left-panel">
+                                <div class="incident-section-new">
+                                    <h3>O INCIDENTE</h3>
+                                    <div class="chat-log-new" id="chat-log">
+                                        ${this.renderChatMessages(sessionData.messages)}
+                                    </div>
+                                </div>
+                                
+                                <div class="voting-section-new">
+                                    <h3>Como você acha que o usuário se comportou?</h3>
+                                    <div class="vote-buttons-new">
+                                        <button class="vote-btn-new ok-btn-new" data-vote="improcedente">
+                                            <div class="vote-icon">😇</div>
+                                            <span>OK</span>
+                                        </button>
+                                        <button class="vote-btn-new intimidou-btn-new" data-vote="intimidou">
+                                            <div class="vote-icon">😐</div>
+                                            <span>Intimidou</span>
+                                        </button>
+                                        <button class="vote-btn-new grave-btn-new" data-vote="grave">
+                                            <div class="vote-icon">😈</div>
+                                            <span>GRAVE</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div class="voting-section">
-                                <h3>Como você acha que o usuário se comportou?</h3>
-                                <div class="vote-buttons">
-                                    <button class="vote-btn ok-btn" data-vote="improcedente">
-                                        <i class="fas fa-smile"></i>
-                                        <span>OK</span>
-                                    </button>
-                                    <button class="vote-btn intimidou-btn" data-vote="intimidou">
-                                        <i class="fas fa-meh"></i>
-                                        <span>Intimidou</span>
-                                    </button>
-                                    <button class="vote-btn grave-btn" data-vote="grave">
-                                        <i class="fas fa-angry"></i>
-                                        <span>GRAVE</span>
-                                    </button>
+                            <div class="right-panel">
+                                <div class="guardians-section">
+                                    <h3>GUARDIÕES</h3>
+                                    <div class="guardians-list" id="guardians-list">
+                                        ${this.renderGuardiansList(sessionData)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="modal-footer">
+                        <div class="modal-footer-new">
                             <button class="btn btn-secondary" id="leave-session">Sair da Sessão</button>
                         </div>
                     </div>
@@ -453,14 +530,61 @@ class RealTimeUpdates {
 
             renderChatMessages(messages) {
                 return messages.map(msg => `
-                    <div class="message ${msg.is_reported_user ? 'reported-user' : ''}">
-                        <div class="message-header">
-                            <span class="username">${msg.anonymized_username}</span>
-                            <span class="timestamp">${this.formatDateTime(msg.timestamp)}</span>
+                    <div class="message-new ${msg.is_reported_user ? 'reported-user-new' : ''}">
+                        <div class="message-header-new">
+                            <span class="username-new">${msg.anonymized_username}</span>
+                            <span class="timestamp-new">${this.formatDateTime(msg.timestamp)}</span>
                         </div>
-                        <div class="message-content">${msg.content}</div>
+                        <div class="message-content-new">${msg.content}</div>
                     </div>
                 `).join('');
+            }
+
+            renderGuardiansList(sessionData) {
+                // Por enquanto, mostrar 5 slots para Guardiões
+                // Em uma implementação real, isso viria da API
+                const guardians = [
+                    { id: 1, name: 'Guardião 1', status: 'waiting', vote: null },
+                    { id: 2, name: 'Guardião 2', status: 'waiting', vote: null },
+                    { id: 3, name: 'Guardião 3', status: 'waiting', vote: null },
+                    { id: 4, name: 'Guardião 4', status: 'waiting', vote: null },
+                    { id: 5, name: 'Você', status: 'current', vote: null }
+                ];
+                
+                return guardians.map(guardian => `
+                    <div class="guardian-item ${guardian.status === 'current' ? 'current-guardian' : ''}" data-guardian-id="${guardian.id}">
+                        <div class="guardian-avatar">
+                            ${guardian.status === 'current' ? '👤' : '⏳'}
+                        </div>
+                        <div class="guardian-info">
+                            <span class="guardian-name">${guardian.name}</span>
+                            <div class="guardian-status">
+                                ${this.getGuardianStatusText(guardian.status)}
+                            </div>
+                        </div>
+                        <div class="guardian-vote" id="vote-${guardian.id}">
+                            ${this.getVoteIcon(guardian.vote)}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getGuardianStatusText(status) {
+                switch(status) {
+                    case 'waiting': return 'Aguardando...';
+                    case 'current': return 'Sua vez!';
+                    case 'voted': return 'Votou';
+                    default: return 'Aguardando...';
+                }
+            }
+
+            getVoteIcon(vote) {
+                switch(vote) {
+                    case 'improcedente': return '😇';
+                    case 'intimidou': return '😐';
+                    case 'grave': return '😈';
+                    default: return '';
+                }
             }
 
             startVotingTimer(timeRemaining) {
@@ -532,23 +656,38 @@ class RealTimeUpdates {
 
             showVoteConfirmation(voteData) {
                 // Desabilitar botões de voto
-                document.querySelectorAll('.vote-btn').forEach(btn => {
+                document.querySelectorAll('.vote-btn-new').forEach(btn => {
                     btn.disabled = true;
                     btn.classList.add('disabled');
                 });
 
+                // Atualizar voto do Guardião atual na lista
+                const currentGuardian = document.querySelector('.current-guardian');
+                if (currentGuardian) {
+                    const voteElement = currentGuardian.querySelector('.guardian-vote');
+                    const statusElement = currentGuardian.querySelector('.guardian-status');
+                    if (voteElement) {
+                        voteElement.textContent = this.getVoteIcon(voteData.vote_type);
+                    }
+                    if (statusElement) {
+                        statusElement.textContent = 'Votou';
+                    }
+                    currentGuardian.classList.remove('current-guardian');
+                    currentGuardian.classList.add('voted-guardian');
+                }
+
                 // Mostrar confirmação
                 const confirmation = document.createElement('div');
-                confirmation.className = 'vote-confirmation';
+                confirmation.className = 'vote-confirmation-new';
                 confirmation.innerHTML = `
-                    <div class="confirmation-content">
+                    <div class="confirmation-content-new">
                         <i class="fas fa-check-circle"></i>
                         <span>Voto registrado com sucesso!</span>
                         <p>Aguardando outros Guardiões votarem... (${voteData.votes_count}/5)</p>
                     </div>
                 `;
 
-                document.querySelector('.voting-section').appendChild(confirmation);
+                document.querySelector('.voting-section-new').appendChild(confirmation);
             }
 
             async showFinalDecision(sessionId) {
@@ -594,6 +733,12 @@ class RealTimeUpdates {
                 const modal = document.querySelector('.voting-modal-overlay');
                 if (modal) {
                     modal.remove();
+                }
+                
+                // Também remover pop-up de notificação se existir
+                const notification = document.querySelector('.notification-popup-overlay');
+                if (notification) {
+                    notification.remove();
                 }
                 
                 if (this.votingTimer) {
