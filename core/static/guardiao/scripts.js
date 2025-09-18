@@ -727,6 +727,12 @@ class RealTimeUpdates {
                         return;
                     }
                     
+                    console.log('🚀 Enviando voto para API:', {
+                        session_id: sessionId,
+                        guardian_id: guardianId,
+                        vote_type: voteType
+                    });
+
                     const response = await fetch('/api/session/vote/', {
                         method: 'POST',
                         headers: {
@@ -740,7 +746,9 @@ class RealTimeUpdates {
                         })
                     });
 
+                    console.log('📡 Resposta da API recebida:', response.status, response.statusText);
                     const data = await response.json();
+                    console.log('📋 Dados da resposta:', data);
 
                     if (data.success) {
                         // Adicionar vote_type à resposta da API
