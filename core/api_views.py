@@ -378,13 +378,17 @@ def check_session(request):
         guardian_id = request.session.get('guardian_id')
         guardian_db_id = request.session.get('guardian_db_id')
         
+        print(f"🔍 check_session - guardian_id: {guardian_id}, guardian_db_id: {guardian_db_id}")
+        
         if guardian_id and guardian_db_id:
+            print(f"✅ Sessão válida - retornando guardian_id: {guardian_id}")
             return Response({
                 'authenticated': True,
                 'guardian_id': guardian_id,
                 'guardian_db_id': guardian_db_id
             })
         else:
+            print(f"❌ Sessão inválida - guardian_id: {guardian_id}, guardian_db_id: {guardian_db_id}")
             return Response({
                 'authenticated': False,
                 'message': 'Usuário não logado'
