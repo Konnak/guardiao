@@ -811,6 +811,9 @@ class RealTimeUpdates {
                     votedButton.classList.add('voted');
                     console.log('✅ Classe voted adicionada ao botão:', votedButton.className);
                     console.log('✅ Estilos aplicados:', votedButton.style.cssText);
+                    
+                    // Atualizar slot "Você" na seção de guardiões
+                    this.updateCurrentUserSlot(voteData.vote_type);
                 } else {
                     console.error('❌ Botão votado não encontrado para:', voteData.vote_type);
                     // Tentar encontrar todos os botões para debug
@@ -857,50 +860,87 @@ class RealTimeUpdates {
                 });
             }
 
-            updateGuardiansSection(guardiansInfo) {
-                console.log('🔍 Atualizando seção de guardiões:', guardiansInfo);
+            updateCurrentUserSlot(voteType) {
+                console.log('🎯 Atualizando slot do usuário atual com voto:', voteType);
                 
-                // Buscar seção de guardiões
-                const guardiansSection = document.querySelector('.guardians-section');
-                if (!guardiansSection) {
-                    console.log('❌ Seção de guardiões não encontrada');
+                // Buscar o slot "Você" (guardian-id="5")
+                const currentUserSlot = document.querySelector('.guardian-item[data-guardian-id="5"]');
+                if (!currentUserSlot) {
+                    console.log('❌ Slot do usuário atual não encontrado');
                     return;
                 }
                 
+                const statusElement = currentUserSlot.querySelector('.guardian-status');
+                const voteElement = currentUserSlot.querySelector('.guardian-vote');
+                
+                if (statusElement) {
+                    statusElement.textContent = 'Votou';
+                }
+                
+                if (voteElement) {
+                    voteElement.innerHTML = this.getVoteIcon(voteType);
+                }
+            }
+
+            updateGuardiansSection(guardiansInfo) {
+                console.log('🔍 Atualizando seção de guardiões:', guardiansInfo);
+                
                 // Buscar lista de guardiões
-                const guardiansList = guardiansSection.querySelector('.guardians-list');
+                const guardiansList = document.querySelector('.guardians-list');
                 if (!guardiansList) {
                     console.log('❌ Lista de guardiões não encontrada');
                     return;
                 }
                 
-                // Limpar lista atual
-                guardiansList.innerHTML = '';
+                // Manter o visual original com 5 slots fixos
+                const guardianItems = guardiansList.querySelectorAll('.guardian-item');
                 
-                // Adicionar cada guardião
-                guardiansInfo.forEach((guardian, index) => {
-                    const guardianElement = document.createElement('div');
-                    guardianElement.className = `guardian-item ${guardian.is_active ? 'active' : 'inactive'}`;
+                // Contar votos para distribuir nos slots
+                const votedGuardians = guardiansInfo.filter(g => g.has_voted);
+                const waitingGuardians = guardiansInfo.filter(g => !g.has_voted && g.is_active);
+                
+                // Atualizar cada slot
+                guardianItems.forEach((item, index) => {
+                    const guardianId = item.dataset.guardianId;
+                    const avatarElement = item.querySelector('.guardian-avatar');
+                    const statusElement = item.querySelector('.guardian-status');
+                    const voteElement = item.querySelector('.guardian-vote');
                     
-                    let statusText = 'Aguardando...';
-                    let statusClass = 'waiting';
-                    
-                    if (guardian.has_voted) {
-                        statusText = guardian.vote_display || 'Votou';
-                        statusClass = 'voted';
-                    } else if (!guardian.is_active) {
-                        statusText = 'Saiu';
-                        statusClass = 'left';
+                    if (guardianId === '5') {
+                        // Slot "Você" - mostrar status atual
+                        if (statusElement) {
+                            statusElement.textContent = 'Sua vez!';
+                        }
+                        if (avatarElement) {
+                            avatarElement.innerHTML = '👤';
+                        }
+                    } else {
+                        // Slots dos outros guardiões
+                        if (index < votedGuardians.length) {
+                            // Mostrar voto anônimo
+                            const votedGuardian = votedGuardians[index];
+                            if (statusElement) {
+                                statusElement.textContent = 'Votou';
+                            }
+                            if (voteElement) {
+                                voteElement.innerHTML = this.getVoteIcon(votedGuardian.vote_type);
+                            }
+                            if (avatarElement) {
+                                avatarElement.innerHTML = '👤';
+                            }
+                        } else {
+                            // Mostrar aguardando
+                            if (statusElement) {
+                                statusElement.textContent = 'Aguardando...';
+                            }
+                            if (voteElement) {
+                                voteElement.innerHTML = '';
+                            }
+                            if (avatarElement) {
+                                avatarElement.innerHTML = '<div class="loading-spinner-small"></div>';
+                            }
+                        }
                     }
-                    
-                    guardianElement.innerHTML = `
-                        <div class="guardian-info">
-                            <span class="guardian-name">${guardian.display_name}</span>
-                            <span class="guardian-status ${statusClass}">${statusText}</span>
-                        </div>
-                    `;
-                    
-                    guardiansList.appendChild(guardianElement);
                 });
             }
 
