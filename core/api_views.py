@@ -384,7 +384,7 @@ def check_session(request):
             print(f"✅ Sessão válida - retornando guardian_id: {guardian_id}")
             response_data = {
                 'authenticated': True,
-                'guardian_id': guardian_id,
+                'guardian_id': str(guardian_id),  # CORREÇÃO: Converter para string
                 'guardian_db_id': guardian_db_id
             }
             print(f"🔍 Dados sendo retornados: {response_data}")
