@@ -622,15 +622,37 @@ class RealTimeUpdates {
             }
 
             renderChatMessages(messages) {
-                return messages.map(msg => `
-                    <div class="message-new ${msg.is_reported_user ? 'reported-user-new' : ''}">
-                        <div class="message-header-new">
-                            <span class="username-new">${msg.anonymized_username}</span>
-                            <span class="timestamp-new">${this.formatDateTime(msg.timestamp)}</span>
+                return messages.map(msg => {
+                    let attachmentsHtml = '';
+                    
+                    // Renderizar anexos se existirem
+                    if (msg.has_attachments && msg.attachments_info) {
+                        attachmentsHtml = msg.attachments_info.map(attachment => {
+                            if (attachment.is_image) {
+                                return `<div class="attachment-image"><img src="${attachment.url}" alt="${attachment.filename}" style="max-width: 300px; max-height: 200px; border-radius: 8px; margin-top: 8px;"></div>`;
+                            } else if (attachment.is_video) {
+                                return `<div class="attachment-video"><video src="${attachment.url}" controls style="max-width: 300px; max-height: 200px; border-radius: 8px; margin-top: 8px;"></video></div>`;
+                            } else if (attachment.type === 'custom_emoji') {
+                                return `<div class="attachment-emoji"><img src="${attachment.url}" alt="${attachment.name}" style="width: 32px; height: 32px; margin-top: 4px;"></div>`;
+                            } else if (attachment.type === 'sticker') {
+                                return `<div class="attachment-sticker"><img src="${attachment.url}" alt="${attachment.name}" style="width: 64px; height: 64px; margin-top: 4px;"></div>`;
+                            } else {
+                                return `<div class="attachment-file"><a href="${attachment.url}" target="_blank" style="color: #58A6FF; text-decoration: none;">📎 ${attachment.filename}</a></div>`;
+                            }
+                        }).join('');
+                    }
+                    
+                    return `
+                        <div class="message-new ${msg.is_reported_user ? 'reported-user-new' : ''}">
+                            <div class="message-header-new">
+                                <span class="username-new">${msg.anonymized_username}</span>
+                                <span class="timestamp-new">${this.formatDateTime(msg.timestamp)}</span>
+                            </div>
+                            <div class="message-content-new">${msg.content}</div>
+                            ${attachmentsHtml}
                         </div>
-                        <div class="message-content-new">${msg.content}</div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             renderGuardiansList(sessionData) {
