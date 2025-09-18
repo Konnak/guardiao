@@ -641,14 +641,51 @@ def get_guardian_status(request, guardian_id):
                     'is_online': guardian.status == 'online'
                 })
             else:
-                # Para discord_ids reais, retornar erro mais informativo
-                print(f"❌ Guardião com discord_id {guardian_id} não encontrado - usuário não registrado")
-                return Response({
-                    'success': False,
-                    'error': f'Usuário não registrado como Guardião',
-                    'message': 'Para se tornar um Guardião, faça login no site primeiro',
-                    'discord_id': guardian_id
-                }, status=status.HTTP_404_NOT_FOUND)
+                # Para discord_ids reais, tentar criar automaticamente se possível
+                print(f"❌ Guardião com discord_id {guardian_id} não encontrado - tentando criar automaticamente")
+                
+                # Verificar se é um discord_id válido (maior que 1000000000000000)
+                if int(guardian_id) > 1000000000000000:
+                    try:
+                        # Criar Guardião temporário com informações básicas
+                        guardian = Guardian.objects.create(
+                            discord_id=guardian_id,
+                            discord_username=f"User{guardian_id}",
+                            discord_display_name=f"Usuário {guardian_id}",
+                            status='offline',
+                            level=1,
+                            points=0
+                        )
+                        print(f"🆕 Guardião temporário criado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
+                        
+                        return Response({
+                            'success': True,
+                            'guardian': {
+                                'id': guardian.id,
+                                'discord_id': guardian.discord_id,
+                                'discord_display_name': guardian.discord_display_name,
+                                'status': guardian.status,
+                                'level': guardian.level,
+                                'points': guardian.points
+                            },
+                            'is_online': guardian.status == 'online',
+                            'message': 'Guardião criado automaticamente. Faça login no site para completar o registro.'
+                        })
+                    except Exception as e:
+                        print(f"❌ Erro ao criar Guardião temporário: {e}")
+                        return Response({
+                            'success': False,
+                            'error': f'Erro ao criar perfil de Guardião',
+                            'message': 'Tente fazer login no site primeiro',
+                            'discord_id': guardian_id
+                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                else:
+                    return Response({
+                        'success': False,
+                        'error': f'Usuário não registrado como Guardião',
+                        'message': 'Para se tornar um Guardião, faça login no site primeiro',
+                        'discord_id': guardian_id
+                    }, status=status.HTTP_404_NOT_FOUND)
             
     except Exception as e:
         return Response(

@@ -84,6 +84,9 @@ def discord_callback(request):
                 'discord_username': user_data['username'],
                 'discord_display_name': user_data.get('display_name') or user_data['username'],
                 'avatar_url': f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None,
+                'status': 'offline',  # Começar como offline
+                'level': 1,
+                'points': 0,
             }
         )
         
@@ -93,12 +96,16 @@ def discord_callback(request):
             guardian.discord_display_name = user_data.get('display_name') or user_data['username']
             guardian.avatar_url = f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None
             guardian.save()
+            print(f"✅ Guardião existente atualizado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
+        else:
+            print(f"🆕 Novo Guardião criado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
         
         # Criar sessão de usuário
         request.session['guardian_id'] = guardian.discord_id  # Usar discord_id para API
         request.session['guardian_db_id'] = guardian.id  # ID do banco para outras operações
         
         messages.success(request, f'Bem-vindo, {guardian.discord_display_name}!')
+        print(f"🔐 Sessão criada para Guardião: {guardian.discord_display_name} (discord_id: {guardian.discord_id})")
         return redirect('dashboard')
         
     except Exception as e:
