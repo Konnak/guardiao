@@ -674,19 +674,26 @@ class RealTimeUpdates {
             }
 
             showVoteConfirmation(voteData) {
+                console.log('🎯 showVoteConfirmation chamada com:', voteData);
+                
                 // Desabilitar botões de voto
                 document.querySelectorAll('.vote-btn-new').forEach(btn => {
                     btn.disabled = true;
                     btn.classList.add('disabled');
+                    btn.classList.remove('voted'); // Remover classe voted de todos
                 });
 
                 // Destacar o botão que foi votado
                 const votedButton = document.querySelector(`[data-vote="${voteData.vote_type}"]`);
+                console.log('🔍 Botão votado encontrado:', votedButton);
+                
                 if (votedButton) {
+                    votedButton.classList.remove('disabled'); // Remover disabled do botão votado
+                    votedButton.disabled = false; // Reabilitar para que os estilos funcionem
                     votedButton.classList.add('voted');
-                    votedButton.style.opacity = '1';
-                    votedButton.style.transform = 'scale(1.05)';
-                    votedButton.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.3)';
+                    console.log('✅ Classe voted adicionada ao botão:', votedButton.className);
+                } else {
+                    console.error('❌ Botão votado não encontrado para:', voteData.vote_type);
                 }
 
                 // Atualizar voto do Guardião atual na lista
