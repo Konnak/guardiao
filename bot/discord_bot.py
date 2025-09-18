@@ -128,6 +128,26 @@ class GuardiaoBot(commands.Bot):
             except Exception as e2:
                 print(f"❌ Segunda tentativa falhou: {e2}")
                 log_error(f"Segunda tentativa de sincronização falhou: {e2}")
+        
+        # Iniciar sistema de notificações agendadas
+        self.start_notification_timer()
+    
+    def start_notification_timer(self):
+        """Inicia o timer para notificações agendadas a cada 5 minutos"""
+        import asyncio
+        
+        async def notification_loop():
+            while True:
+                try:
+                    await asyncio.sleep(300)  # 5 minutos = 300 segundos
+                    await self.send_scheduled_notifications()
+                except Exception as e:
+                    print(f"❌ Erro no loop de notificações: {e}")
+                    await asyncio.sleep(60)  # Aguardar 1 minuto antes de tentar novamente
+        
+        # Executar o loop em background
+        asyncio.create_task(notification_loop())
+        print("⏰ Sistema de notificações agendadas iniciado (5 minutos)")
     
     async def on_message(self, message):
         """Evento executado quando uma mensagem é enviada"""
@@ -177,20 +197,77 @@ class GuardiaoBot(commands.Bot):
                     )
                     
                     embed.add_field(
-                        name="Denúncia #" + str(report.id),
-                        value=f"Usuário denunciado: <@{report.reported_user_id}>\nServidor: {report.guild_id}",
+                        name="Status",
+                        value="🟡 Nova denúncia aguardando análise",
                         inline=False
                     )
                     
                     embed.add_field(
-                        name="Link para Análise",
-                        value=f"[Clique aqui para analisar]({self.site_url}/report/{report.id}/)",
+                        name="Acesso ao Sistema",
+                        value=f"[Clique aqui para acessar]({self.site_url}/)",
                         inline=False
                     )
                     
                     await user.send(embed=embed)
             except Exception as e:
                 print(f"❌ Erro ao enviar notificação para {guardian.discord_display_name}: {e}")
+
+    async def send_scheduled_notifications(self):
+        """Envia notificações agendadas a cada 5 minutos para guardiões em serviço"""
+        from asgiref.sync import sync_to_async
+        from core.models import ReportQueue
+        
+        try:
+            # Buscar denúncias pendentes
+            pending_reports = await sync_to_async(list)(
+                ReportQueue.objects.filter(status='pending').order_by('created_at')
+            )
+            
+            if not pending_reports:
+                return
+            
+            # Buscar guardiões em serviço
+            online_guardians = await sync_to_async(list)(Guardian.objects.filter(status='online'))
+            
+            if not online_guardians:
+                return
+            
+            # Contar denúncias pendentes
+            pending_count = len(pending_reports)
+            
+            for guardian in online_guardians:
+                try:
+                    user = await self.fetch_user(guardian.discord_id)
+                    if user:
+                        embed = discord.Embed(
+                            title="📋 Denúncias Pendentes",
+                            description=f"Você tem {pending_count} nova(s) denúncia(s) aguardando análise.",
+                            color=0xffa500,
+                            timestamp=datetime.now()
+                        )
+                        
+                        embed.add_field(
+                            name="Status",
+                            value="🟡 Aguardando análise",
+                            inline=False
+                        )
+                        
+                        embed.add_field(
+                            name="Acesso ao Sistema",
+                            value=f"[Clique aqui para acessar]({self.site_url}/)",
+                            inline=False
+                        )
+                        
+                        embed.set_footer(text="Verificação automática a cada 5 minutos")
+                        
+                        await user.send(embed=embed)
+                        print(f"✅ Notificação agendada enviada para {guardian.discord_display_name} - {pending_count} denúncias pendentes")
+                        
+                except Exception as e:
+                    print(f"❌ Erro ao enviar notificação agendada para {guardian.discord_display_name}: {e}")
+                    
+        except Exception as e:
+            print(f"❌ Erro no sistema de notificações agendadas: {e}")
     
     async def apply_punishment(self, report: Report):
         """Aplica a punição correspondente ao usuário"""
@@ -442,8 +519,8 @@ async def report_command(
                 is_reported_user=(msg.author.id == usuario.id)
             )
         
-        # Notificar Guardiões em serviço
-        await bot.send_notification_to_guardians(report)
+        # Notificar Guardiões em serviço (comentado - agora usa sistema agendado)
+        # await bot.send_notification_to_guardians(report)
         
         # Resposta para o usuário
         embed = discord.Embed(
