@@ -328,7 +328,7 @@ class RealTimeUpdates {
                     }
 
                     // Obter ID do Guardião atual
-                    const guardianId = this.getCurrentGuardianId();
+                    const guardianId = await this.getCurrentGuardianId();
                     console.log('🔍 Verificando denúncia pendente para Guardião ID:', guardianId);
                     
                     if (!guardianId) {
@@ -377,7 +377,7 @@ class RealTimeUpdates {
                 }
             }
 
-            getCurrentGuardianId() {
+            async getCurrentGuardianId() {
                 // Tentar obter ID do Guardião de diferentes formas
                 console.log('🔍 Buscando ID do Guardião...');
                 console.log('🔍 window.GUARDIAN_DISCORD_ID:', window.GUARDIAN_DISCORD_ID);
@@ -390,7 +390,26 @@ class RealTimeUpdates {
                     return parseInt(window.GUARDIAN_DISCORD_ID);
                 }
                 
-                // 2. Verificar se está armazenado no localStorage
+                // 2. Obter ID da sessão atual (mais confiável que localStorage)
+                try {
+                    const sessionResponse = await fetch('/api/auth/check-session/', {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (sessionResponse.ok) {
+                        const sessionData = await sessionResponse.json();
+                        if (sessionData.authenticated && sessionData.guardian_id) {
+                            console.log('✅ ID encontrado na sessão atual:', sessionData.guardian_id);
+                            localStorage.setItem('guardian_discord_id', sessionData.guardian_id);
+                            return parseInt(sessionData.guardian_id);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Erro ao verificar sessão:', error);
+                }
+                
+                // 3. Verificar se está armazenado no localStorage (fallback)
                 let guardianId = localStorage.getItem('guardian_discord_id');
                 if (guardianId) {
                     console.log('✅ ID encontrado no localStorage:', guardianId);
