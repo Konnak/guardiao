@@ -405,6 +405,9 @@ class RealTimeUpdates {
                 modal.className = 'voting-modal-overlay';
                 modal.innerHTML = `
                     <div class="voting-modal">
+                        <!-- Token CSRF para o modal -->
+                        <input type="hidden" name="csrfmiddlewaretoken" value="${this.getCSRFToken()}">
+                        
                         <div class="modal-header">
                             <h2>Um caso de intimidação</h2>
                             <div class="timer" id="voting-timer">05:00</div>
@@ -601,8 +604,23 @@ class RealTimeUpdates {
             }
 
             getCSRFToken() {
-                return document.querySelector('[name=csrfmiddlewaretoken]').value;
-    }
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (csrfToken) {
+                    return csrfToken.value;
+                }
+                
+                // Tentar obter do cookie se não encontrar no DOM
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'csrftoken') {
+                        return value;
+                    }
+                }
+                
+                console.warn('⚠️ Token CSRF não encontrado');
+                return '';
+            }
 }
 
 // Theme System
