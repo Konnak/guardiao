@@ -946,6 +946,21 @@ def cast_vote_in_session(request):
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
             print(f"✅ cast_vote_in_session - Guardião encontrado: {guardian.discord_username}")
             
+            # Primeiro, buscar sem filtro is_active para ver o que existe
+            try:
+                session_guardian_all = SessionGuardian.objects.get(
+                    session=session,
+                    guardian=guardian
+                )
+                print(f"🔍 cast_vote_in_session - SessionGuardian encontrada (sem filtro): id={session_guardian_all.id}, is_active={session_guardian_all.is_active}")
+            except SessionGuardian.DoesNotExist:
+                print(f"❌ cast_vote_in_session - Nenhuma SessionGuardian encontrada para sessão {session.id} e guardião {guardian.id}")
+                return Response(
+                    {'error': 'Sessão de Guardião não encontrada'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Agora buscar com filtro is_active=True
             session_guardian = SessionGuardian.objects.get(
                 session=session,
                 guardian=guardian,
