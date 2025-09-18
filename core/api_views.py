@@ -606,13 +606,28 @@ def get_pending_report_for_guardian(request, guardian_id):
                 
                 return Response(session_data)
         
-        # Buscar próxima denúncia na fila (pending ou assigned)
-        queue_item = ReportQueue.objects.filter(
+        # Buscar próxima denúncia na fila que o guardião ainda não votou
+        queue_items = ReportQueue.objects.filter(
             status__in=['pending', 'assigned']
-        ).order_by('-priority', 'created_at').first()
+        ).order_by('-priority', 'created_at')
         
         print(f"🔍 Buscando denúncia na fila para guardião {guardian.discord_display_name}")
-        print(f"🔍 Queue item encontrado: {queue_item}")
+        print(f"🔍 Total de itens na fila: {queue_items.count()}")
+        
+        queue_item = None
+        for item in queue_items:
+            # Verificar se o guardião já votou nesta denúncia
+            has_voted = Vote.objects.filter(
+                report=item.report,
+                guardian=guardian
+            ).exists()
+            
+            if not has_voted:
+                queue_item = item
+                print(f"✅ Denúncia encontrada: {item} (Guardião ainda não votou)")
+                break
+            else:
+                print(f"⏭️ Pulando denúncia {item.report.id} (Guardião já votou)")
         
         if not queue_item:
             # Verificar se há denúncias sem fila
