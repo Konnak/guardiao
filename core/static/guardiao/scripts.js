@@ -777,6 +777,7 @@ class RealTimeUpdates {
                         data.vote_type = voteType;
                         this.showVoteConfirmation(data);
                         this.updateAnonymousVotes(data.anonymous_votes);
+                        this.updateGuardiansSection(data.guardians_info);
                         if (data.session_completed) {
                             this.showFinalDecision(sessionId);
                         }
@@ -853,6 +854,53 @@ class RealTimeUpdates {
                         <span class="vote-time">${new Date(vote.timestamp).toLocaleTimeString()}</span>
                     `;
                     votesList.appendChild(voteElement);
+                });
+            }
+
+            updateGuardiansSection(guardiansInfo) {
+                console.log('🔍 Atualizando seção de guardiões:', guardiansInfo);
+                
+                // Buscar seção de guardiões
+                const guardiansSection = document.querySelector('.guardians-section');
+                if (!guardiansSection) {
+                    console.log('❌ Seção de guardiões não encontrada');
+                    return;
+                }
+                
+                // Buscar lista de guardiões
+                const guardiansList = guardiansSection.querySelector('.guardians-list');
+                if (!guardiansList) {
+                    console.log('❌ Lista de guardiões não encontrada');
+                    return;
+                }
+                
+                // Limpar lista atual
+                guardiansList.innerHTML = '';
+                
+                // Adicionar cada guardião
+                guardiansInfo.forEach((guardian, index) => {
+                    const guardianElement = document.createElement('div');
+                    guardianElement.className = `guardian-item ${guardian.is_active ? 'active' : 'inactive'}`;
+                    
+                    let statusText = 'Aguardando...';
+                    let statusClass = 'waiting';
+                    
+                    if (guardian.has_voted) {
+                        statusText = guardian.vote_display || 'Votou';
+                        statusClass = 'voted';
+                    } else if (!guardian.is_active) {
+                        statusText = 'Saiu';
+                        statusClass = 'left';
+                    }
+                    
+                    guardianElement.innerHTML = `
+                        <div class="guardian-info">
+                            <span class="guardian-name">${guardian.display_name}</span>
+                            <span class="guardian-status ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                    
+                    guardiansList.appendChild(guardianElement);
                 });
             }
 

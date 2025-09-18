@@ -563,11 +563,44 @@ def get_pending_report_for_guardian(request, guardian_id):
         if active_session:
             # Verificar se a sessão ainda está válida (não expirou)
             if active_session.session.voting_deadline and active_session.session.voting_deadline < timezone.now():
-                # Sessão expirada - marcar como inativa e continuar
-                active_session.is_active = False
-                active_session.left_at = timezone.now()
-                active_session.save()
+                # Sessão expirada - implementar rotação de guardiões
                 print(f"⏰ Sessão expirada para guardião {guardian.discord_display_name}")
+                
+                # Marcar guardiões inativos como saídos
+                inactive_guardians = SessionGuardian.objects.filter(
+                    session=active_session.session,
+                    is_active=True,
+                    has_voted=False
+                )
+                
+                for inactive_guardian in inactive_guardians:
+                    inactive_guardian.is_active = False
+                    inactive_guardian.left_at = timezone.now()
+                    inactive_guardian.save()
+                    print(f"🔄 Guardião {inactive_guardian.guardian.discord_display_name} removido por expiração")
+                
+                # Verificar se ainda há guardiões ativos
+                remaining_active = SessionGuardian.objects.filter(
+                    session=active_session.session,
+                    is_active=True
+                ).count()
+                
+                if remaining_active == 0:
+                    # Nenhum guardião ativo - cancelar sessão e recolocar na fila
+                    active_session.session.status = 'cancelled'
+                    active_session.session.save()
+                    
+                    try:
+                        queue_item = ReportQueue.objects.get(report=active_session.session.report)
+                        queue_item.status = 'pending'
+                        queue_item.assigned_at = None
+                        queue_item.save()
+                        print(f"🔄 Sessão cancelada e recolocada na fila")
+                    except ReportQueue.DoesNotExist:
+                        print(f"⚠️ Item da fila não encontrado para denúncia {active_session.session.report.id}")
+                
+                # Continuar para buscar nova denúncia
+                active_session = None
             else:
                 # Retornar a sessão atual válida
                 session_data = {
@@ -677,41 +710,67 @@ def get_pending_report_for_guardian(request, guardian_id):
                     'message': 'Não é possível participar novamente desta denúncia'
                 })
             
-            # Adicionar guardião à sessão existente
-            session_guardian, created = SessionGuardian.objects.get_or_create(
+            # Verificar se há espaço para novos guardiões (máximo 5)
+            active_guardians_count = SessionGuardian.objects.filter(
                 session=existing_session,
-                guardian=guardian,
-                defaults={'is_active': True}
-            )
-            print(f"🔍 SessionGuardian - created: {created}, id: {session_guardian.id if session_guardian else 'None'}")
+                is_active=True
+            ).count()
             
-            if not created:
-                # Se já existe mas está inativo, reativar
+            # Verificar se o guardião já está na sessão
+            existing_session_guardian = SessionGuardian.objects.filter(
+                session=existing_session,
+                guardian=guardian
+            ).first()
+            
+            if existing_session_guardian:
+                # Guardião já está na sessão
+                session_guardian = existing_session_guardian
+                created = False
+                
+                # Se está inativo, reativar
                 if not session_guardian.is_active:
                     session_guardian.is_active = True
                     session_guardian.left_at = None
                     session_guardian.save()
                     print(f"🔄 SessionGuardian reativada: {session_guardian.id}")
-                # Retornar dados da sessão mesmo se já estiver participando
-                session_data = {
-                    'session_id': str(existing_session.id),
-                    'report_id': existing_session.report.id,
-                    'report': {
-                        'id': existing_session.report.id,
-                        'reason': existing_session.report.reason,
-                        'reported_user_id': existing_session.report.reported_user_id,
-                        'reporter_user_id': existing_session.report.reporter_user_id,
-                        'created_at': existing_session.report.created_at.isoformat(),
-                    },
-                    'messages': [],
-                    'voting_deadline': existing_session.voting_deadline.isoformat() if existing_session.voting_deadline else None,
-                    'time_remaining': None
-                }
-                
-                # Calcular tempo restante
-                if existing_session.voting_deadline:
-                    remaining = existing_session.voting_deadline - timezone.now()
-                    session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
+            elif active_guardians_count >= 5:
+                # Sessão cheia - retornar erro
+                return Response({
+                    'error': 'Sessão cheia',
+                    'message': 'Esta sessão já tem 5 guardiões participando. Tente novamente mais tarde.'
+                })
+            else:
+                # Adicionar novo guardião à sessão
+                session_guardian = SessionGuardian.objects.create(
+                    session=existing_session,
+                    guardian=guardian,
+                    is_active=True
+                )
+                created = True
+                print(f"🆕 Novo guardião adicionado à sessão: {session_guardian.id}")
+            
+            print(f"🔍 SessionGuardian - created: {created}, id: {session_guardian.id if session_guardian else 'None'}")
+            
+            # Retornar dados da sessão
+            session_data = {
+                'session_id': str(existing_session.id),
+                'report_id': existing_session.report.id,
+                'report': {
+                    'id': existing_session.report.id,
+                    'reason': existing_session.report.reason,
+                    'reported_user_id': existing_session.report.reported_user_id,
+                    'reporter_user_id': existing_session.report.reporter_user_id,
+                    'created_at': existing_session.report.created_at.isoformat(),
+                },
+                'messages': [],
+                'voting_deadline': existing_session.voting_deadline.isoformat() if existing_session.voting_deadline else None,
+                'time_remaining': None
+            }
+            
+            # Calcular tempo restante
+            if existing_session.voting_deadline:
+                remaining = existing_session.voting_deadline - timezone.now()
+                session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
                 
                 # Buscar mensagens da denúncia
                 messages = Message.objects.filter(report=existing_session.report).order_by('timestamp')
@@ -1062,6 +1121,24 @@ def cast_vote_in_session(request):
             # Notificar bot para aplicar punição
             # notify_bot_apply_punishment(report) # Desabilitado por enquanto
         
+        # Buscar informações dos guardiões da sessão
+        session_guardians = SessionGuardian.objects.filter(session=session).order_by('joined_at')
+        guardians_info = []
+        
+        for sg in session_guardians:
+            guardian_info = {
+                'id': sg.guardian.id,
+                'discord_id': str(sg.guardian.discord_id),
+                'display_name': sg.guardian.discord_display_name,
+                'is_active': sg.is_active,
+                'has_voted': sg.has_voted,
+                'vote_type': sg.vote_type,
+                'vote_display': sg.get_vote_type_display() if sg.vote_type else None,
+                'voted_at': sg.voted_at.isoformat() if sg.voted_at else None,
+                'joined_at': sg.joined_at.isoformat()
+            }
+            guardians_info.append(guardian_info)
+        
         # Buscar votos anônimos para mostrar
         anonymous_votes = []
         all_votes = Vote.objects.filter(report=session.report).order_by('created_at')
@@ -1075,10 +1152,11 @@ def cast_vote_in_session(request):
         return Response({
             'success': True,
             'message': 'Voto registrado com sucesso',
-            'vote_type': data['vote_type'],  # Adicionar vote_type na resposta
+            'vote_type': data['vote_type'],
             'session_completed': session.status == 'completed',
             'votes_count': voted_guardians.count(),
             'total_active_guardians': active_guardians.count(),
+            'guardians_info': guardians_info,
             'anonymous_votes': anonymous_votes,
             'total_votes': all_votes.count()
         })
