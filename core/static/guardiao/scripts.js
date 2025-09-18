@@ -185,7 +185,7 @@ class RealTimeUpdates {
                     this.checkPendingReport();
                     // Verificar denúncias pendentes a cada 1 minuto (60000ms)
                     setInterval(this.checkPendingReport.bind(this), 60000);
-                }
+        }
     }
 
     async checkForUpdates() {
@@ -684,7 +684,8 @@ class RealTimeUpdates {
                 });
 
                 // Destacar o botão que foi votado
-                const votedButton = document.querySelector(`[data-vote="${voteData.vote_type}"]`);
+                console.log('🔍 Procurando botão com data-vote:', voteData.vote_type);
+                const votedButton = document.querySelector(`.vote-btn-new[data-vote="${voteData.vote_type}"]`);
                 console.log('🔍 Botão votado encontrado:', votedButton);
                 
                 if (votedButton) {
@@ -692,8 +693,15 @@ class RealTimeUpdates {
                     votedButton.disabled = false; // Reabilitar para que os estilos funcionem
                     votedButton.classList.add('voted');
                     console.log('✅ Classe voted adicionada ao botão:', votedButton.className);
+                    console.log('✅ Estilos aplicados:', votedButton.style.cssText);
                 } else {
                     console.error('❌ Botão votado não encontrado para:', voteData.vote_type);
+                    // Tentar encontrar todos os botões para debug
+                    const allButtons = document.querySelectorAll('.vote-btn-new');
+                    console.log('🔍 Todos os botões encontrados:', allButtons);
+                    allButtons.forEach((btn, index) => {
+                        console.log(`Botão ${index}:`, btn.dataset.vote, btn);
+                    });
                 }
 
                 // Atualizar voto do Guardião atual na lista
