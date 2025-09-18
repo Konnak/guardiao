@@ -943,7 +943,7 @@ def cast_vote_in_session(request):
             print(f"✅ cast_vote_in_session - Sessão encontrada: {session.id}")
             
             guardian = Guardian.objects.get(discord_id=data['guardian_id'])
-            print(f"✅ cast_vote_in_session - Guardião encontrado: {guardian.username}")
+            print(f"✅ cast_vote_in_session - Guardião encontrado: {guardian.discord_username}")
             
             session_guardian = SessionGuardian.objects.get(
                 session=session,
