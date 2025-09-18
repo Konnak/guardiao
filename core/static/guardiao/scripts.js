@@ -899,9 +899,12 @@ class RealTimeUpdates {
                 // Manter o visual original com 5 slots fixos
                 const guardianItems = guardiansList.querySelectorAll('.guardian-item');
                 
-                // Contar votos para distribuir nos slots
-                const votedGuardians = guardiansInfo.filter(g => g.has_voted);
-                const waitingGuardians = guardiansInfo.filter(g => !g.has_voted && g.is_active);
+                // Separar votos dos outros guardiões do voto do usuário atual
+                const currentUserGuardian = guardiansInfo.find(g => g.discord_id === window.GUARDIAN_DISCORD_ID || 
+                    (localStorage.getItem('guardian_discord_id') && g.discord_id === localStorage.getItem('guardian_discord_id')));
+                
+                const otherVotedGuardians = guardiansInfo.filter(g => g.has_voted && g !== currentUserGuardian);
+                const waitingGuardians = guardiansInfo.filter(g => !g.has_voted && g.is_active && g !== currentUserGuardian);
                 
                 // Atualizar cada slot
                 guardianItems.forEach((item, index) => {
@@ -916,17 +919,33 @@ class RealTimeUpdates {
                         if (nameElement) {
                             nameElement.textContent = 'Você';
                         }
-                        if (statusElement) {
-                            statusElement.textContent = 'Sua vez!';
+                        
+                        if (currentUserGuardian && currentUserGuardian.has_voted) {
+                            // Usuário já votou
+                            if (statusElement) {
+                                statusElement.textContent = 'Votou';
+                            }
+                            if (voteElement) {
+                                voteElement.innerHTML = this.getVoteIcon(currentUserGuardian.vote_type);
+                            }
+                        } else {
+                            // Usuário ainda não votou
+                            if (statusElement) {
+                                statusElement.textContent = 'Sua vez!';
+                            }
+                            if (voteElement) {
+                                voteElement.innerHTML = '';
+                            }
                         }
+                        
                         if (avatarElement) {
                             avatarElement.innerHTML = '👤';
                         }
                     } else {
-                        // Slots dos outros guardiões
-                        if (index < votedGuardians.length) {
-                            // Mostrar voto anônimo
-                            const votedGuardian = votedGuardians[index];
+                        // Slots dos outros guardiões (1-4)
+                        if (index < otherVotedGuardians.length) {
+                            // Mostrar voto anônimo de outro guardião
+                            const votedGuardian = otherVotedGuardians[index];
                             if (statusElement) {
                                 statusElement.textContent = 'Votou';
                             }
