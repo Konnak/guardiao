@@ -988,12 +988,12 @@ def cast_vote_in_session(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Verificar se a sessão expirou
+        # Se a sessão expirou, estender o prazo automaticamente
         if session.is_expired():
-            return Response(
-                {'error': 'Tempo de votação expirado'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            from datetime import timedelta
+            session.voting_deadline = timezone.now() + timedelta(minutes=5)
+            session.save()
+            print(f"⏰ Sessão expirada - prazo estendido automaticamente para: {session.voting_deadline}")
         
         # Garantir que SessionGuardian está ativo antes de votar
         if not session_guardian.is_active:
