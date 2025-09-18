@@ -594,7 +594,7 @@ class RealTimeUpdates {
                     case 'improcedente': return '😇';
                     case 'intimidou': return '😐';
                     case 'grave': return '😈';
-                    default: return '<div class="loading-spinner-small"></div>';
+                    default: return '';
                 }
             }
 

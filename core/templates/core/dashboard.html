@@ -30,22 +30,6 @@
                 <i class="fas fa-power-off"></i>
                 Alternar Status
             </button>
-            <button class="btn btn-secondary" onclick="testPendingReports()" style="margin-left: 10px;">
-                <i class="fas fa-test-tube"></i>
-                Testar Denúncias Pendentes
-            </button>
-            <button class="btn btn-warning" onclick="clearLocalStorage()" style="margin-left: 10px;">
-                <i class="fas fa-trash"></i>
-                Limpar Cache
-            </button>
-            <button class="btn btn-info" onclick="createTestSession()" style="margin-left: 10px;">
-                <i class="fas fa-play"></i>
-                Criar Sessão de Teste
-            </button>
-            <button class="btn btn-success" onclick="addToQueue()" style="margin-left: 10px;">
-                <i class="fas fa-plus"></i>
-                Adicionar à Fila
-            </button>
         </div>
     </div>
 
@@ -257,85 +241,5 @@ function toggleStatus() {
     });
 }
 
-        // Test Pending Reports Function
-        function testPendingReports() {
-            fetch('/api/test/pending-reports/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Teste de Denúncias Pendentes:\n\n${data.message}\n\n📊 Detalhes:\n- Pendentes na fila: ${data.pending_in_queue}\n- Atribuídas na fila: ${data.assigned_in_queue}\n- Total na fila: ${data.total_in_queue}\n- Denúncias pendentes: ${data.total_pending_reports}\n- Denúncias em votação: ${data.total_voting_reports}`);
-                } else {
-                    alert('Erro ao testar denúncias pendentes: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao testar denúncias pendentes');
-            });
-        }
-
-        // Clear LocalStorage Function
-        function clearLocalStorage() {
-            localStorage.removeItem('guardian_discord_id');
-            console.log('🗑️ localStorage limpo');
-            alert('Cache limpo! Recarregue a página para atualizar.');
-            location.reload();
-        }
-
-        // Create Test Session Function
-        function createTestSession() {
-            const guardianId = {{ guardian.discord_id }};
-            console.log('🧪 Criando sessão de teste para Guardião:', guardianId);
-            
-            fetch('/api/test/create-session/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
-                },
-                body: JSON.stringify({
-                    guardian_id: guardianId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Sessão de teste criada!\n\nSession ID: ${data.session_id}\nReport ID: ${data.report_id}\nGuardian ID: ${data.guardian_id}\n\nRecarregue a página para ver o modal.`);
-                    location.reload();
-                } else {
-                    alert('Erro ao criar sessão de teste: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao criar sessão de teste');
-            });
-        }
-
-        // Add To Queue Function
-        function addToQueue() {
-            console.log('📋 Adicionando denúncias pendentes à fila...');
-            
-            fetch('/api/test/add-to-queue/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Denúncias adicionadas à fila!\n\n${data.message}\n\n📊 Detalhes:\n- Adicionadas: ${data.added_count}\n- Pendentes: ${data.total_pending}\n- Em votação: ${data.total_voting}\n- Total: ${data.total_reports}\n\nRecarregue a página para ver o modal.`);
-                    location.reload();
-                } else {
-                    alert('Erro ao adicionar à fila: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao adicionar à fila');
-            });
-        }
 </script>
 {% endblock %}
