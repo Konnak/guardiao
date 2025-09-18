@@ -656,14 +656,13 @@ class RealTimeUpdates {
             }
 
             renderGuardiansList(sessionData) {
-                // Por enquanto, mostrar 5 slots para Guardiões
-                // Em uma implementação real, isso viria da API
+                // Mostrar 5 slots para Guardiões numerados de 1 a 5
                 const guardians = [
                     { id: 1, name: 'Guardião 1', status: 'waiting', vote: null },
                     { id: 2, name: 'Guardião 2', status: 'waiting', vote: null },
                     { id: 3, name: 'Guardião 3', status: 'waiting', vote: null },
                     { id: 4, name: 'Guardião 4', status: 'waiting', vote: null },
-                    { id: 5, name: 'Você', status: 'current', vote: null }
+                    { id: 5, name: 'Guardião 5', status: 'current', vote: null }
                 ];
                 
                 return guardians.map(guardian => `
@@ -863,15 +862,20 @@ class RealTimeUpdates {
             updateCurrentUserSlot(voteType) {
                 console.log('🎯 Atualizando slot do usuário atual com voto:', voteType);
                 
-                // Buscar o slot "Você" (guardian-id="5")
+                // Buscar o slot do usuário atual (guardian-id="5")
                 const currentUserSlot = document.querySelector('.guardian-item[data-guardian-id="5"]');
                 if (!currentUserSlot) {
                     console.log('❌ Slot do usuário atual não encontrado');
                     return;
                 }
                 
+                const nameElement = currentUserSlot.querySelector('.guardian-name');
                 const statusElement = currentUserSlot.querySelector('.guardian-status');
                 const voteElement = currentUserSlot.querySelector('.guardian-vote');
+                
+                if (nameElement) {
+                    nameElement.textContent = 'Você';
+                }
                 
                 if (statusElement) {
                     statusElement.textContent = 'Votou';
@@ -905,9 +909,13 @@ class RealTimeUpdates {
                     const avatarElement = item.querySelector('.guardian-avatar');
                     const statusElement = item.querySelector('.guardian-status');
                     const voteElement = item.querySelector('.guardian-vote');
+                    const nameElement = item.querySelector('.guardian-name');
                     
                     if (guardianId === '5') {
-                        // Slot "Você" - mostrar status atual
+                        // Slot do usuário atual - mostrar "Você" e status atual
+                        if (nameElement) {
+                            nameElement.textContent = 'Você';
+                        }
                         if (statusElement) {
                             statusElement.textContent = 'Sua vez!';
                         }
