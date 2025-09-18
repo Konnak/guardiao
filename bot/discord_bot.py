@@ -406,20 +406,21 @@ async def report_command(
                     }
                     attachments_info.append(attachment_info)
             
-            # Coletar emojis customizados
-            if msg.emojis:
+            # Coletar emojis customizados (usando regex para encontrar emojis no conteúdo)
+            import re
+            emoji_pattern = r'<a?:\w+:\d+>'
+            custom_emojis = re.findall(emoji_pattern, msg.content)
+            if custom_emojis:
                 has_attachments = True
-                for emoji in msg.emojis:
+                for emoji_match in custom_emojis:
                     emoji_info = {
-                        'name': emoji.name,
-                        'url': str(emoji.url) if emoji.url else None,
-                        'is_custom': emoji.id is not None,
+                        'match': emoji_match,
                         'type': 'custom_emoji'
                     }
                     attachments_info.append(emoji_info)
             
-            # Coletar stickers
-            if msg.stickers:
+            # Coletar stickers (se disponível)
+            if hasattr(msg, 'stickers') and msg.stickers:
                 has_attachments = True
                 for sticker in msg.stickers:
                     sticker_info = {
