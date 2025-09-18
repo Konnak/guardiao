@@ -263,7 +263,7 @@ function toggleStatus() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`Teste de Denúncias Pendentes:\n\n${data.message}\n\nTotal de denúncias pendentes: ${data.total_pending_reports}`);
+                    alert(`Teste de Denúncias Pendentes:\n\n${data.message}\n\n📊 Detalhes:\n- Pendentes na fila: ${data.pending_in_queue}\n- Atribuídas na fila: ${data.assigned_in_queue}\n- Total na fila: ${data.total_in_queue}\n- Denúncias pendentes: ${data.total_pending_reports}\n- Denúncias em votação: ${data.total_voting_reports}`);
                 } else {
                     alert('Erro ao testar denúncias pendentes: ' + data.error);
                 }
@@ -326,7 +326,7 @@ function toggleStatus() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`Denúncias adicionadas à fila!\n\n${data.message}\n\nTotal de denúncias pendentes: ${data.total_pending}\n\nRecarregue a página para ver o modal.`);
+                    alert(`Denúncias adicionadas à fila!\n\n${data.message}\n\n📊 Detalhes:\n- Adicionadas: ${data.added_count}\n- Pendentes: ${data.total_pending}\n- Em votação: ${data.total_voting}\n- Total: ${data.total_reports}\n\nRecarregue a página para ver o modal.`);
                     location.reload();
                 } else {
                     alert('Erro ao adicionar à fila: ' + data.error);

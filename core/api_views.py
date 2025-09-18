@@ -524,9 +524,9 @@ def get_pending_report_for_guardian(request, guardian_id):
             
             return Response(session_data)
         
-        # Buscar próxima denúncia na fila
+        # Buscar próxima denúncia na fila (pending ou assigned)
         queue_item = ReportQueue.objects.filter(
-            status='pending'
+            status__in=['pending', 'assigned']
         ).order_by('-priority', 'created_at').first()
         
         if not queue_item:
@@ -889,14 +889,23 @@ def test_pending_reports(request):
     Endpoint para testar se há denúncias pendentes na fila
     """
     try:
-        pending_count = ReportQueue.objects.filter(status='pending').count()
-        total_reports = Report.objects.filter(status='pending').count()
+        # Contar denúncias na fila (pending + assigned)
+        pending_in_queue = ReportQueue.objects.filter(status='pending').count()
+        assigned_in_queue = ReportQueue.objects.filter(status='assigned').count()
+        total_in_queue = pending_in_queue + assigned_in_queue
+        
+        # Contar denúncias por status
+        total_pending_reports = Report.objects.filter(status='pending').count()
+        total_voting_reports = Report.objects.filter(status='voting').count()
         
         return Response({
             'success': True,
-            'pending_in_queue': pending_count,
-            'total_pending_reports': total_reports,
-            'message': f'Há {pending_count} denúncias pendentes na fila'
+            'pending_in_queue': pending_in_queue,
+            'assigned_in_queue': assigned_in_queue,
+            'total_in_queue': total_in_queue,
+            'total_pending_reports': total_pending_reports,
+            'total_voting_reports': total_voting_reports,
+            'message': f'Há {total_in_queue} denúncias na fila ({pending_in_queue} pendentes, {assigned_in_queue} atribuídas)'
         })
         
     except Exception as e:
@@ -1006,29 +1015,34 @@ def add_pending_reports_to_queue(request):
     Endpoint para adicionar denúncias pendentes à fila
     """
     try:
-        # Buscar todas as denúncias pendentes que não estão na fila
-        pending_reports = Report.objects.filter(status='pending')
+        # Buscar todas as denúncias pendentes e em votação que não estão na fila
+        reports_to_queue = Report.objects.filter(status__in=['pending', 'voting'])
         added_count = 0
         
-        for report in pending_reports:
+        for report in reports_to_queue:
             # Verificar se já está na fila
             queue_exists = ReportQueue.objects.filter(report=report).exists()
             
             if not queue_exists:
+                # Determinar status da fila baseado no status da denúncia
+                queue_status = 'pending' if report.status == 'pending' else 'assigned'
+                
                 # Adicionar à fila
                 ReportQueue.objects.create(
                     report=report,
-                    status='pending',
+                    status=queue_status,
                     priority=1
                 )
                 added_count += 1
-                print(f"✅ Denúncia {report.id} adicionada à fila")
+                print(f"✅ Denúncia {report.id} ({report.status}) adicionada à fila como {queue_status}")
         
         return Response({
             'success': True,
             'message': f'{added_count} denúncias adicionadas à fila',
             'added_count': added_count,
-            'total_pending': pending_reports.count()
+            'total_pending': reports_to_queue.filter(status='pending').count(),
+            'total_voting': reports_to_queue.filter(status='voting').count(),
+            'total_reports': reports_to_queue.count()
         })
         
     except Exception as e:
