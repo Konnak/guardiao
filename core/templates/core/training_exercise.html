@@ -1,0 +1,550 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Exercício {{ exercise.id }} - {{ exercise.section.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header do Exercício -->
+    <div class="exercise-header">
+        <div class="exercise-icon">
+            <i class="fas fa-question-circle"></i>
+        </div>
+        <div class="exercise-content">
+            <h1>Exercício {{ exercise.id }}</h1>
+            <p class="exercise-subtitle">{{ exercise.section.title }}</p>
+        </div>
+    </div>
+
+    <!-- Progresso da Seção -->
+    <div class="section-progress">
+        <div class="progress-info">
+            <div class="progress-stats">
+                <div class="stat-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ progress.exercises_correct }} corretos</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-times-circle"></i>
+                    <span>{{ progress.exercises_completed|add:"-"|add:progress.exercises_correct }} incorretos</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-percentage"></i>
+                    <span>{{ progress.accuracy_percentage }}% de acerto</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {% widthratio progress.exercises_completed exercise.section.exercises.count 100 %}%"></div>
+        </div>
+        <div class="progress-text">
+            {{ progress.exercises_completed }} de {{ exercise.section.exercises.count }} exercícios concluídos
+        </div>
+    </div>
+
+    <!-- Pergunta -->
+    <div class="question-card">
+        <div class="question-header">
+            <h2>
+                <i class="fas fa-lightbulb"></i>
+                Pergunta
+            </h2>
+        </div>
+        
+        <div class="question-body">
+            <p class="question-text">{{ exercise.question }}</p>
+        </div>
+    </div>
+
+    <!-- Resposta Anterior (se existir) -->
+    {% if existing_answer %}
+        <div class="previous-answer-card">
+            <div class="answer-header">
+                <h3>
+                    <i class="fas fa-history"></i>
+                    Sua Resposta Anterior
+                </h3>
+            </div>
+            
+            <div class="answer-content">
+                <div class="answer-selected">
+                    <strong>Resposta selecionada:</strong>
+                    <span class="answer-option answer-{{ existing_answer.selected_answer }}">
+                        {% if existing_answer.selected_answer == 'a' %}A{% elif existing_answer.selected_answer == 'b' %}B{% else %}C{% endif %}
+                    </span>
+                </div>
+                
+                <div class="answer-result">
+                    {% if existing_answer.is_correct %}
+                        <div class="result-correct">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Resposta Correta!</span>
+                        </div>
+                    {% else %}
+                        <div class="result-incorrect">
+                            <i class="fas fa-times-circle"></i>
+                            <span>Resposta Incorreta</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="answer-explanation">
+                    <strong>Explicação:</strong>
+                    <p>{{ exercise.explanation }}</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Formulário de Resposta -->
+    {% if not existing_answer %}
+        <div class="answer-form-card">
+            <div class="form-header">
+                <h3>
+                    <i class="fas fa-edit"></i>
+                    Sua Resposta
+                </h3>
+            </div>
+            
+            <form method="post" action="{% url 'training_answer' exercise.id %}" class="answer-form">
+                {% csrf_token %}
+                
+                <div class="answer-options">
+                    <div class="option-item">
+                        <input type="radio" name="answer" value="a" id="option_a" required>
+                        <label for="option_a" class="option-label">
+                            <span class="option-letter">A</span>
+                            <span class="option-text">{{ exercise.option_a }}</span>
+                        </label>
+                    </div>
+                    
+                    <div class="option-item">
+                        <input type="radio" name="answer" value="b" id="option_b" required>
+                        <label for="option_b" class="option-label">
+                            <span class="option-letter">B</span>
+                            <span class="option-text">{{ exercise.option_b }}</span>
+                        </label>
+                    </div>
+                    
+                    {% if exercise.option_c %}
+                        <div class="option-item">
+                            <input type="radio" name="answer" value="c" id="option_c" required>
+                            <label for="option_c" class="option-label">
+                                <span class="option-letter">C</span>
+                                <span class="option-text">{{ exercise.option_c }}</span>
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Enviar Resposta
+                    </button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- Ações -->
+    <div class="exercise-actions">
+        <a href="{% url 'training_section' exercise.section.id %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Voltar à Seção
+        </a>
+        
+        {% if existing_answer %}
+            {% if progress.exercises_completed < exercise.section.exercises.count %}
+                <a href="{% url 'training_section' exercise.section.id %}" class="btn btn-primary">
+                    <i class="fas fa-forward"></i>
+                    Próximo Exercício
+                </a>
+            {% else %}
+                <a href="{% url 'training_section' exercise.section.id %}" class="btn btn-success">
+                    <i class="fas fa-check"></i>
+                    Concluir Seção
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.exercise-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.exercise-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.exercise-content h1 {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+}
+
+.exercise-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.section-progress {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.progress-info {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.progress-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.stat-item i {
+    font-size: 1.1rem;
+}
+
+.stat-item i.fa-check-circle {
+    color: var(--accent-success);
+}
+
+.stat-item i.fa-times-circle {
+    color: var(--accent-danger);
+}
+
+.stat-item i.fa-percentage {
+    color: var(--logo-gold);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: var(--tertiary-bg);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--logo-gold), var(--logo-teal));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.question-card {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-teal);
+}
+
+.question-header h2 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.question-header h2 i {
+    color: var(--logo-teal);
+}
+
+.question-text {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 0;
+    font-weight: 500;
+}
+
+.previous-answer-card {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.answer-header h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.answer-header h3 i {
+    color: var(--logo-gold);
+}
+
+.answer-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.answer-selected {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.answer-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.answer-a {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.answer-b {
+    background-color: var(--logo-teal);
+    color: white;
+}
+
+.answer-c {
+    background-color: var(--accent-danger);
+    color: white;
+}
+
+.answer-result {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.result-correct {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--accent-success);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.result-incorrect {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--accent-danger);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.answer-explanation {
+    padding: var(--spacing-lg);
+    background-color: var(--tertiary-bg);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--logo-gold);
+}
+
+.answer-explanation strong {
+    color: var(--logo-gold);
+    font-weight: 600;
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.answer-explanation p {
+    color: var(--text-primary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.answer-form-card {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.form-header h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.form-header h3 i {
+    color: var(--logo-gold);
+}
+
+.answer-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.option-item {
+    position: relative;
+}
+
+.option-item input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.option-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background-color: var(--tertiary-bg);
+    border: 2px solid var(--tertiary-bg);
+    border-radius: var(--border-radius-lg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+.option-label:hover {
+    border-color: var(--logo-gold);
+    background-color: rgba(255, 215, 0, 0.05);
+}
+
+.option-item input[type="radio"]:checked + .option-label {
+    border-color: var(--logo-gold);
+    background-color: rgba(255, 215, 0, 0.1);
+}
+
+.option-letter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    color: white;
+    font-weight: 600;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.option-text {
+    color: var(--text-primary);
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.form-actions {
+    text-align: center;
+}
+
+.exercise-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 768px) {
+    .exercise-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .progress-stats {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .answer-selected {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .answer-result {
+        justify-content: center;
+    }
+    
+    .option-label {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
+    }
+    
+    .exercise-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

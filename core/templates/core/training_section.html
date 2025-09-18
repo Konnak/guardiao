@@ -1,0 +1,459 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{{ section.title }} - Treinamento Guardiões{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header da Seção -->
+    <div class="section-header">
+        <div class="section-icon">
+            {% if section.section_type == 'principios' %}
+                <i class="fas fa-heart"></i>
+            {% elif section.section_type == 'classificacao' %}
+                <i class="fas fa-balance-scale"></i>
+            {% elif section.section_type == 'prova_final' %}
+                <i class="fas fa-trophy"></i>
+            {% endif %}
+        </div>
+        <div class="section-content">
+            <h1>{{ section.title }}</h1>
+            <p class="section-subtitle">
+                {% if section.section_type == 'principios' %}
+                    Os princípios fundamentais que todo Guardião deve seguir
+                {% elif section.section_type == 'classificacao' %}
+                    Domine a arte de classificar denúncias com precisão
+                {% elif section.section_type == 'prova_final' %}
+                    Teste seus conhecimentos na prova final
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Progresso da Seção -->
+    <div class="section-progress">
+        <div class="progress-info">
+            <div class="progress-stats">
+                <div class="stat-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ progress.exercises_correct }} corretos</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-times-circle"></i>
+                    <span>{{ progress.exercises_completed|add:"-"|add:progress.exercises_correct }} incorretos</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-percentage"></i>
+                    <span>{{ progress.accuracy_percentage }}% de acerto</span>
+                </div>
+            </div>
+            
+            {% if section.section_type == 'prova_final' %}
+                <div class="exam-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Você pode errar no máximo 1 pergunta para ser aprovado!</span>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {% widthratio progress.exercises_completed exercises.count 100 %}%"></div>
+        </div>
+        <div class="progress-text">
+            {{ progress.exercises_completed }} de {{ exercises.count }} exercícios concluídos
+        </div>
+    </div>
+
+    <!-- Conteúdo da Seção -->
+    <div class="section-content-card">
+        <div class="content-header">
+            <h2>
+                <i class="fas fa-book-open"></i>
+                Conteúdo da Seção
+            </h2>
+        </div>
+        
+        <div class="content-body">
+            {{ section.content|linebreaks }}
+        </div>
+    </div>
+
+    <!-- Exercícios -->
+    <div class="exercises-section">
+        <h2>
+            <i class="fas fa-question-circle"></i>
+            Exercícios
+        </h2>
+        
+        <div class="exercises-list">
+            {% for exercise in exercises %}
+                <div class="exercise-item" data-exercise-id="{{ exercise.id }}">
+                    <div class="exercise-header">
+                        <div class="exercise-number">
+                            {{ forloop.counter }}
+                        </div>
+                        <div class="exercise-info">
+                            <h3>Exercício {{ forloop.counter }}</h3>
+                            <p class="exercise-question">{{ exercise.question }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="exercise-actions">
+                        {% if progress.status == 'completed' %}
+                            <span class="btn btn-success">
+                                <i class="fas fa-check"></i>
+                                Concluído
+                            </span>
+                        {% else %}
+                            <a href="{% url 'training_exercise' exercise.id %}" class="btn btn-primary">
+                                <i class="fas fa-play"></i>
+                                Responder
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="section-actions">
+        <a href="{% url 'training_start' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Voltar ao Treinamento
+        </a>
+        
+        {% if progress.status == 'completed' %}
+            {% if section.section_type == 'prova_final' %}
+                <a href="{% url 'dashboard' %}" class="btn btn-success">
+                    <i class="fas fa-trophy"></i>
+                    Ver Resultado
+                </a>
+            {% else %}
+                <a href="{% url 'training_start' %}" class="btn btn-success">
+                    <i class="fas fa-check"></i>
+                    Seção Concluída
+                </a>
+            {% endif %}
+        {% else %}
+            {% if exercises %}
+                <a href="{% url 'training_exercise' exercises.first.id %}" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Começar Exercícios
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.section-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+.section-content h1 {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+}
+
+.section-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.section-progress {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.progress-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.stat-item i {
+    font-size: 1.1rem;
+}
+
+.stat-item i.fa-check-circle {
+    color: var(--accent-success);
+}
+
+.stat-item i.fa-times-circle {
+    color: var(--accent-danger);
+}
+
+.stat-item i.fa-percentage {
+    color: var(--logo-gold);
+}
+
+.exam-warning {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(210, 153, 34, 0.1);
+    border: 1px solid var(--accent-warning);
+    border-radius: var(--border-radius);
+    color: var(--accent-warning);
+    font-weight: 500;
+}
+
+.exam-warning i {
+    font-size: 1.1rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: var(--tertiary-bg);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--logo-gold), var(--logo-teal));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.section-content-card {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-teal);
+}
+
+.content-header h2 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.content-header h2 i {
+    color: var(--logo-teal);
+}
+
+.content-body {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+.content-body h3 {
+    color: var(--logo-gold);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+}
+
+.content-body h4 {
+    color: var(--logo-teal);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+}
+
+.content-body ul,
+.content-body ol {
+    margin: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.content-body li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.content-body strong {
+    color: var(--logo-gold);
+    font-weight: 600;
+}
+
+.content-body em {
+    color: var(--logo-teal);
+    font-style: italic;
+}
+
+.exercises-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.exercises-section h2 {
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.exercises-section h2 i {
+    color: var(--logo-gold);
+}
+
+.exercises-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.exercise-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--tertiary-bg);
+    transition: all 0.3s ease;
+}
+
+.exercise-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--logo-gold);
+}
+
+.exercise-header {
+    display: flex;
+    gap: var(--spacing-lg);
+    flex: 1;
+}
+
+.exercise-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.exercise-info h3 {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.exercise-question {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.exercise-actions {
+    flex-shrink: 0;
+}
+
+.section-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .progress-info {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        text-align: center;
+    }
+    
+    .progress-stats {
+        justify-content: center;
+    }
+    
+    .exercise-item {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        text-align: center;
+    }
+    
+    .exercise-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .section-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

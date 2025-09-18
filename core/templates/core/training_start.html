@@ -1,0 +1,503 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Treinamento para Guardiões - Sistema Guardião{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header do Treinamento -->
+    <div class="training-header">
+        <div class="training-icon">
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="training-content">
+            <h1>Treinamento para Guardiões</h1>
+            <p class="training-subtitle">
+                Prepare-se para proteger sua comunidade com conhecimento e responsabilidade
+            </p>
+        </div>
+    </div>
+
+    <!-- Informações do Usuário -->
+    <div class="user-info-card">
+        <div class="user-info-content">
+            <div class="user-avatar">
+                {% if guardian.avatar_url %}
+                    <img src="{{ guardian.avatar_url }}" alt="{{ guardian.discord_display_name }}">
+                {% else %}
+                    <i class="fas fa-user-circle"></i>
+                {% endif %}
+            </div>
+            <div class="user-details">
+                <h3>{{ guardian.discord_display_name }}</h3>
+                <p class="user-status">
+                    <i class="fas fa-user"></i>
+                    Usuário - Candidato a Guardião
+                </p>
+                <p class="account-age">
+                    <i class="fas fa-calendar-alt"></i>
+                    Conta criada em {{ guardian.discord_account_created_at|date:"d/m/Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seções de Treinamento -->
+    <div class="training-sections">
+        <h2>
+            <i class="fas fa-list-ol"></i>
+            Módulos de Treinamento
+        </h2>
+        
+        <div class="sections-grid">
+            {% for section in sections %}
+                <div class="section-card" data-section-type="{{ section.section_type }}">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            {% if section.section_type == 'principios' %}
+                                <i class="fas fa-heart"></i>
+                            {% elif section.section_type == 'classificacao' %}
+                                <i class="fas fa-balance-scale"></i>
+                            {% elif section.section_type == 'prova_final' %}
+                                <i class="fas fa-trophy"></i>
+                            {% endif %}
+                        </div>
+                        <div class="section-info">
+                            <h3>{{ section.title }}</h3>
+                            <p class="section-description">
+                                {% if section.section_type == 'principios' %}
+                                    Aprenda os princípios fundamentais que todo Guardião deve seguir
+                                {% elif section.section_type == 'classificacao' %}
+                                    Domine a arte de classificar denúncias com precisão
+                                {% elif section.section_type == 'prova_final' %}
+                                    Teste seus conhecimentos na prova final
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="section-stats">
+                        {% if section.section_type == 'prova_final' %}
+                            <div class="stat-item">
+                                <i class="fas fa-question-circle"></i>
+                                <span>10-15 perguntas</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Máximo 1 erro</span>
+                            </div>
+                        {% else %}
+                            <div class="stat-item">
+                                <i class="fas fa-question-circle"></i>
+                                <span>{{ section.exercises.count }} exercícios</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-clock"></i>
+                                <span>~15 minutos</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="section-actions">
+                        {% if section.section_type == 'prova_final' %}
+                            <span class="btn btn-secondary disabled">
+                                <i class="fas fa-lock"></i>
+                                Disponível após completar as seções anteriores
+                            </span>
+                        {% else %}
+                            <a href="{% url 'training_section' section.id %}" class="btn btn-primary">
+                                <i class="fas fa-play"></i>
+                                Iniciar Seção
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Informações Importantes -->
+    <div class="training-info">
+        <div class="info-card">
+            <h3>
+                <i class="fas fa-info-circle"></i>
+                Informações Importantes
+            </h3>
+            <div class="info-list">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <strong>Tempo Estimado:</strong>
+                        <span>45-60 minutos para completar todo o treinamento</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-graduation-cap"></i>
+                    <div>
+                        <strong>Prova Final:</strong>
+                        <span>Você pode errar no máximo 1 pergunta para ser aprovado</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-redo"></i>
+                    <div>
+                        <strong>Reprovação:</strong>
+                        <span>Se reprovado, você pode tentar novamente após 24 horas</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>
+                        <strong>Aprovação:</strong>
+                        <span>Ao ser aprovado, você se tornará um Guardião automaticamente</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="training-actions">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Voltar ao Dashboard
+        </a>
+        
+        {% if sections %}
+            <a href="{% url 'training_section' sections.first.id %}" class="btn btn-primary">
+                <i class="fas fa-play"></i>
+                Começar Treinamento
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.training-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.training-icon {
+    font-size: 4rem;
+    color: white;
+    opacity: 0.9;
+}
+
+.training-content h1 {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+}
+
+.training-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.user-info-card {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.user-info-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--tertiary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--logo-gold);
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-avatar i {
+    font-size: 2.5rem;
+    color: var(--logo-gold);
+}
+
+.user-details h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.user-status,
+.account-age {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.user-status i,
+.account-age i {
+    color: var(--logo-gold);
+}
+
+.training-sections {
+    margin-bottom: var(--spacing-xl);
+}
+
+.training-sections h2 {
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.training-sections h2 i {
+    color: var(--logo-gold);
+}
+
+.sections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.section-card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.section-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.section-card[data-section-type="principios"] {
+    border-color: var(--logo-gold);
+}
+
+.section-card[data-section-type="classificacao"] {
+    border-color: var(--logo-teal);
+}
+
+.section-card[data-section-type="prova_final"] {
+    border-color: var(--accent-danger);
+}
+
+.section-header {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.section-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.section-card[data-section-type="principios"] .section-icon {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.2));
+    color: var(--logo-gold);
+}
+
+.section-card[data-section-type="classificacao"] .section-icon {
+    background: linear-gradient(135deg, rgba(0, 128, 128, 0.1), rgba(0, 128, 128, 0.2));
+    color: var(--logo-teal);
+}
+
+.section-card[data-section-type="prova_final"] .section-icon {
+    background: linear-gradient(135deg, rgba(218, 54, 51, 0.1), rgba(218, 54, 51, 0.2));
+    color: var(--accent-danger);
+}
+
+.section-info h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.section-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background-color: var(--tertiary-bg);
+    border-radius: var(--border-radius);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.stat-item i {
+    color: var(--logo-gold);
+}
+
+.section-actions {
+    text-align: center;
+}
+
+.btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.training-info {
+    margin-bottom: var(--spacing-xl);
+}
+
+.info-card {
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-teal);
+}
+
+.info-card h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.info-card h3 i {
+    color: var(--logo-teal);
+}
+
+.info-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.info-item {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--tertiary-bg);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--logo-gold);
+}
+
+.info-item i {
+    color: var(--logo-gold);
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.info-item div {
+    flex: 1;
+}
+
+.info-item strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    display: block;
+    margin-bottom: var(--spacing-xs);
+}
+
+.info-item span {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.training-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 768px) {
+    .training-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .user-info-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .sections-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .section-stats {
+        justify-content: center;
+    }
+    
+    .training-actions {
+        flex-direction: column;
+    }
+    
+    .info-item {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
