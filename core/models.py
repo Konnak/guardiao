@@ -89,10 +89,10 @@ class Guardian(models.Model):
             return 0
         
         if not self.discord_account_created_at:
-            return 90  # Assumir 90 dias se não souber a data
+            # Se não temos a data, assumir que é elegível (conta antiga)
+            return 0
         
         from datetime import timedelta
-        three_months_ago = timezone.now() - timedelta(days=90)
         days_since_creation = (timezone.now() - self.discord_account_created_at).days
         return max(0, 90 - days_since_creation)
 
