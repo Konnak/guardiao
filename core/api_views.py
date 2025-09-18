@@ -382,11 +382,13 @@ def check_session(request):
         
         if guardian_id and guardian_db_id:
             print(f"✅ Sessão válida - retornando guardian_id: {guardian_id}")
-            return Response({
+            response_data = {
                 'authenticated': True,
                 'guardian_id': guardian_id,
                 'guardian_db_id': guardian_db_id
-            })
+            }
+            print(f"🔍 Dados sendo retornados: {response_data}")
+            return Response(response_data)
         else:
             print(f"❌ Sessão inválida - guardian_id: {guardian_id}, guardian_db_id: {guardian_db_id}")
             return Response({
