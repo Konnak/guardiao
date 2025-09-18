@@ -95,16 +95,19 @@ class StatusToggle {
         const newStatus = currentStatus === 'online' ? 'offline' : 'online';
 
         try {
+            console.log('🔄 Alterando status para:', newStatus);
             const data = await Utils.request('/api/guardians/status/', {
                 method: 'POST',
                 body: JSON.stringify({ status: newStatus })
             });
 
+            console.log('📊 Resposta da API:', data);
             if (data.success) {
                 Utils.showNotification(`Status alterado para: ${data.status_display}`, 'success');
                 setTimeout(() => location.reload(), 1000);
             }
         } catch (error) {
+            console.error('❌ Erro ao alterar status:', error);
             Utils.showNotification(`Erro ao alterar status: ${error.message}`, 'error');
         }
     }
