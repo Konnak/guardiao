@@ -406,13 +406,21 @@ class RealTimeUpdates {
                     
                     if (sessionResponse.ok) {
                         const sessionData = await sessionResponse.json();
+                        console.log('🔍 Dados da sessão recebidos:', sessionData);
+                        console.log('🔍 sessionData.authenticated:', sessionData.authenticated);
+                        console.log('🔍 sessionData.guardian_id:', sessionData.guardian_id);
+                        
                         if (sessionData.authenticated && sessionData.guardian_id) {
                             console.log('✅ ID encontrado na sessão atual:', sessionData.guardian_id);
                             // Limpar localStorage antigo e definir o correto
                             localStorage.removeItem('guardian_discord_id');
                             localStorage.setItem('guardian_discord_id', sessionData.guardian_id);
                             return parseInt(sessionData.guardian_id);
+                        } else {
+                            console.log('❌ Sessão inválida ou guardian_id ausente');
                         }
+                    } else {
+                        console.log('❌ Resposta da sessão não OK:', sessionResponse.status);
                     }
                 } catch (error) {
                     console.warn('⚠️ Erro ao verificar sessão:', error);
