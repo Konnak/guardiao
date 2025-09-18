@@ -9,7 +9,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('reports/', views.reports_list, name='reports_list'),
-    path('report/<int:report_id>/', views.report_detail, name='report_detail'),
+    # path('report/<int:report_id>/', views.report_detail, name='report_detail'),  # REMOVIDO - expõe informações sensíveis
     
     # Autenticação
     path('auth/discord/', views.discord_login, name='discord_login'),

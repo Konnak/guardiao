@@ -602,8 +602,35 @@ def get_pending_report_for_guardian(request, guardian_id):
             status__in=['pending', 'assigned']
         ).order_by('-priority', 'created_at').first()
         
+        print(f"🔍 Buscando denúncia na fila para guardião {guardian.discord_display_name}")
+        print(f"🔍 Queue item encontrado: {queue_item}")
+        
         if not queue_item:
-            return Response({'message': 'Nenhuma denúncia pendente na fila'})
+            # Verificar se há denúncias sem fila
+            reports_without_queue = Report.objects.filter(
+                status='pending'
+            ).exclude(
+                reportqueue__isnull=False
+            ).order_by('-created_at')
+            
+            print(f"🔍 Denúncias sem fila: {reports_without_queue.count()}")
+            
+            if reports_without_queue.exists():
+                # Criar fila para denúncias órfãs
+                for report in reports_without_queue:
+                    ReportQueue.objects.get_or_create(
+                        report=report,
+                        defaults={'status': 'pending', 'priority': 0}
+                    )
+                    print(f"✅ Fila criada para denúncia #{report.id}")
+                
+                # Buscar novamente
+                queue_item = ReportQueue.objects.filter(
+                    status__in=['pending', 'assigned']
+                ).order_by('-priority', 'created_at').first()
+            
+            if not queue_item:
+                return Response({'message': 'Nenhuma denúncia pendente na fila'})
         
         # Verificar se já existe sessão ativa para esta denúncia
         existing_session = VotingSession.objects.filter(

@@ -263,7 +263,8 @@ class RealTimeUpdates {
         
         // Add event listeners
         notification.querySelector('.attend-btn').addEventListener('click', () => {
-            window.location.href = `/report/${report.id}/`;
+            // Usar o sistema de fila em vez do link antigo
+            this.checkPendingReport();
         });
         
         notification.querySelector('.dismiss-btn').addEventListener('click', () => {
@@ -823,44 +824,6 @@ class RealTimeUpdates {
                     `;
                     votesList.appendChild(voteElement);
                 });
-            }
-
-                // Atualizar voto do Guardião atual na lista
-                const currentGuardian = document.querySelector('.current-guardian');
-                if (currentGuardian) {
-                    const voteElement = currentGuardian.querySelector('.guardian-vote');
-                    const statusElement = currentGuardian.querySelector('.guardian-status');
-                    const avatarElement = currentGuardian.querySelector('.guardian-avatar');
-                    
-                    if (voteElement) {
-                        voteElement.innerHTML = this.getVoteIcon(voteData.vote_type);
-                    }
-                    if (statusElement) {
-                        statusElement.textContent = 'Votou';
-                    }
-                    if (avatarElement) {
-                        // Trocar avatar pelo emoji do voto
-                        avatarElement.innerHTML = this.getVoteIcon(voteData.vote_type);
-                    }
-                    
-                    // Adicionar classe baseada no tipo de voto
-                    currentGuardian.classList.remove('current-guardian');
-                    currentGuardian.classList.add('voted-guardian');
-                    currentGuardian.classList.add(`vote-${voteData.vote_type}`);
-                }
-
-                // Mostrar confirmação
-                const confirmation = document.createElement('div');
-                confirmation.className = 'vote-confirmation-new';
-                confirmation.innerHTML = `
-                    <div class="confirmation-content-new">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Voto registrado com sucesso!</span>
-                        <p>Aguardando outros Guardiões votarem... (${voteData.votes_count}/5)</p>
-                    </div>
-                `;
-
-                document.querySelector('.voting-section-new').appendChild(confirmation);
             }
 
             async showFinalDecision(sessionId) {
