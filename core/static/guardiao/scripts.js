@@ -660,6 +660,8 @@ class RealTimeUpdates {
                     const data = await response.json();
 
                     if (data.success) {
+                        // Adicionar vote_type à resposta da API
+                        data.vote_type = voteType;
                         this.showVoteConfirmation(data);
                         if (data.session_completed) {
                             this.showFinalDecision(sessionId);

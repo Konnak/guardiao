@@ -806,6 +806,7 @@ def cast_vote_in_session(request):
         return Response({
             'success': True,
             'message': 'Voto registrado com sucesso',
+            'vote_type': data['vote_type'],  # Adicionar vote_type na resposta
             'session_completed': session.status == 'completed',
             'votes_count': voted_guardians.count(),
             'total_active_guardians': active_guardians.count()
