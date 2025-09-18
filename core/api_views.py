@@ -274,16 +274,21 @@ def update_guardian_status(request):
     Endpoint para atualizar status do Guardião
     """
     try:
+        print("✅ API NOVA CHAMADA: /api/guardians/status/")
+        
         data = request.data
         new_status = data.get('status')
+        print(f"🔄 Status solicitado: {new_status}")
         
         if not new_status:
+            print("❌ Status é obrigatório")
             return Response(
                 {'error': 'status é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         if new_status not in ['online', 'offline']:
+            print("❌ Status inválido")
             return Response(
                 {'error': 'Status inválido'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -291,7 +296,10 @@ def update_guardian_status(request):
         
         # Obter discord_id da sessão
         guardian_discord_id = request.session.get('guardian_id')
+        print(f"🔍 Discord ID da sessão: {guardian_discord_id}")
+        
         if not guardian_discord_id:
+            print("❌ Usuário não logado")
             return Response(
                 {'error': 'Usuário não logado'},
                 status=status.HTTP_401_UNAUTHORIZED
@@ -299,7 +307,9 @@ def update_guardian_status(request):
         
         try:
             guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+            print(f"✅ Guardião encontrado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
         except Guardian.DoesNotExist:
+            print("❌ Guardião não encontrado")
             return Response(
                 {'error': 'Guardião não encontrado'},
                 status=status.HTTP_404_NOT_FOUND
@@ -308,6 +318,7 @@ def update_guardian_status(request):
         old_status = guardian.status
         guardian.status = new_status
         guardian.save()
+        print(f"✅ Status alterado de {old_status} para {new_status}")
         
         status_display = 'Em Serviço' if new_status == 'online' else 'Fora de Serviço'
         
@@ -320,6 +331,7 @@ def update_guardian_status(request):
         })
         
     except Exception as e:
+        print(f"❌ Erro: {e}")
         return Response(
             {'error': f'Erro ao atualizar status: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

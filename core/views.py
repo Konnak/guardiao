@@ -247,27 +247,37 @@ class VoteView(View):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class StatusToggleView(View):
-    """View para alternar status do Guardião"""
+    """View para alternar status do Guardião - DEPRECATED"""
     
     def post(self, request):
+        print("🚨 API ANTIGA CHAMADA: /api/status/")
+        print("🚨 Esta API está DEPRECATED - use /api/guardians/status/")
+        
         guardian_discord_id = request.session.get('guardian_id')
         if not guardian_discord_id:
+            print("❌ Não autenticado")
             return JsonResponse({'error': 'Não autenticado'}, status=401)
         
         try:
             guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+            print(f"✅ Guardião encontrado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
         except Guardian.DoesNotExist:
+            print("❌ Perfil de Guardião não encontrado")
             return JsonResponse({'error': 'Perfil de Guardião não encontrado'}, status=404)
         
         try:
             data = json.loads(request.body)
             new_status = data.get('status')
+            print(f"🔄 Status solicitado: {new_status}")
             
             if new_status not in ['online', 'offline']:
+                print("❌ Status inválido")
                 return JsonResponse({'error': 'Status inválido'}, status=400)
             
+            old_status = guardian.status
             guardian.status = new_status
             guardian.save()
+            print(f"✅ Status alterado de {old_status} para {new_status}")
             
             return JsonResponse({
                 'success': True,
@@ -276,6 +286,7 @@ class StatusToggleView(View):
             })
             
         except Exception as e:
+            print(f"❌ Erro: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
 

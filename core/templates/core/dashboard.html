@@ -26,7 +26,7 @@
                 <i class="fas fa-circle"></i>
                 <span>{{ guardian.get_status_display }}</span>
             </div>
-            <button class="btn btn-toggle" onclick="toggleStatus()">
+            <button class="btn btn-toggle">
                 <i class="fas fa-power-off"></i>
                 Alternar Status
             </button>
@@ -211,35 +211,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function toggleStatus() {
-    const currentStatus = '{{ guardian.status }}';
-    const newStatus = currentStatus === 'online' ? 'offline' : 'online';
-    
-    fetch('/api/status/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
-        },
-        body: JSON.stringify({
-            guardian_id: {{ guardian.discord_id }},
-            status: newStatus
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Erro ao alterar status: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao alterar status');
-    });
-}
-
-</script>
+<!-- JavaScript removido - agora usa scripts.js -->
 {% endblock %}
