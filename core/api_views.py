@@ -275,12 +275,11 @@ def update_guardian_status(request):
     """
     try:
         data = request.data
-        guardian_id = data.get('guardian_id')
         new_status = data.get('status')
         
-        if not guardian_id or not new_status:
+        if not new_status:
             return Response(
-                {'error': 'guardian_id e status são obrigatórios'},
+                {'error': 'status é obrigatório'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -290,8 +289,16 @@ def update_guardian_status(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Obter discord_id da sessão
+        guardian_discord_id = request.session.get('guardian_id')
+        if not guardian_discord_id:
+            return Response(
+                {'error': 'Usuário não logado'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         try:
-            guardian = Guardian.objects.get(id=guardian_id)
+            guardian = Guardian.objects.get(discord_id=guardian_discord_id)
         except Guardian.DoesNotExist:
             return Response(
                 {'error': 'Guardião não encontrado'},
@@ -302,9 +309,13 @@ def update_guardian_status(request):
         guardian.status = new_status
         guardian.save()
         
+        status_display = 'Em Serviço' if new_status == 'online' else 'Fora de Serviço'
+        
         return Response({
             'success': True,
             'message': f'Status alterado de {old_status} para {new_status}',
+            'status': new_status,
+            'status_display': status_display,
             'guardian': GuardianSerializer(guardian).data
         })
         

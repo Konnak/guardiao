@@ -95,7 +95,7 @@ class StatusToggle {
         const newStatus = currentStatus === 'online' ? 'offline' : 'online';
 
         try {
-            const data = await Utils.request('/api/status/', {
+            const data = await Utils.request('/api/guardians/status/', {
                 method: 'POST',
                 body: JSON.stringify({ status: newStatus })
             });
