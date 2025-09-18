@@ -997,3 +997,42 @@ def create_test_session(request):
             {'error': f'Erro ao criar sessão de teste: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def add_pending_reports_to_queue(request):
+    """
+    Endpoint para adicionar denúncias pendentes à fila
+    """
+    try:
+        # Buscar todas as denúncias pendentes que não estão na fila
+        pending_reports = Report.objects.filter(status='pending')
+        added_count = 0
+        
+        for report in pending_reports:
+            # Verificar se já está na fila
+            queue_exists = ReportQueue.objects.filter(report=report).exists()
+            
+            if not queue_exists:
+                # Adicionar à fila
+                ReportQueue.objects.create(
+                    report=report,
+                    status='pending',
+                    priority=1
+                )
+                added_count += 1
+                print(f"✅ Denúncia {report.id} adicionada à fila")
+        
+        return Response({
+            'success': True,
+            'message': f'{added_count} denúncias adicionadas à fila',
+            'added_count': added_count,
+            'total_pending': pending_reports.count()
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao adicionar denúncias à fila: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -42,6 +42,10 @@
                 <i class="fas fa-play"></i>
                 Criar Sessão de Teste
             </button>
+            <button class="btn btn-success" onclick="addToQueue()" style="margin-left: 10px;">
+                <i class="fas fa-plus"></i>
+                Adicionar à Fila
+            </button>
         </div>
     </div>
 
@@ -305,6 +309,32 @@ function toggleStatus() {
             .catch(error => {
                 console.error('Erro:', error);
                 alert('Erro ao criar sessão de teste');
+            });
+        }
+
+        // Add To Queue Function
+        function addToQueue() {
+            console.log('📋 Adicionando denúncias pendentes à fila...');
+            
+            fetch('/api/test/add-to-queue/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Denúncias adicionadas à fila!\n\n${data.message}\n\nTotal de denúncias pendentes: ${data.total_pending}\n\nRecarregue a página para ver o modal.`);
+                    location.reload();
+                } else {
+                    alert('Erro ao adicionar à fila: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao adicionar à fila');
             });
         }
 </script>

@@ -30,4 +30,5 @@ urlpatterns = [
     path('session/leave/', api_views.leave_voting_session, name='api_leave_voting_session'),
     path('test/pending-reports/', api_views.test_pending_reports, name='api_test_pending_reports'),
     path('test/create-session/', api_views.create_test_session, name='api_create_test_session'),
+    path('test/add-to-queue/', api_views.add_pending_reports_to_queue, name='api_add_pending_reports_to_queue'),
 ]
