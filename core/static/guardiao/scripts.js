@@ -178,14 +178,14 @@ class RealTimeUpdates {
     }
 
     init() {
-        // Check for new reports every 5 seconds
-        if (window.location.pathname.includes('/dashboard') || window.location.pathname === '/') {
-            setInterval(this.checkForUpdates.bind(this), 5000);
-            // Verificar se há denúncia pendente para o Guardião atual
-            this.checkPendingReport();
-            // Verificar denúncias pendentes a cada 10 segundos
-            setInterval(this.checkPendingReport.bind(this), 10000);
-        }
+                // Check for new reports every 5 seconds
+                if (window.location.pathname.includes('/dashboard') || window.location.pathname === '/') {
+                    setInterval(this.checkForUpdates.bind(this), 5000);
+                    // Verificar se há denúncia pendente para o Guardião atual
+                    this.checkPendingReport();
+                    // Verificar denúncias pendentes a cada 1 minuto (60000ms)
+                    setInterval(this.checkPendingReport.bind(this), 60000);
+                }
     }
 
     async checkForUpdates() {
@@ -412,6 +412,13 @@ class RealTimeUpdates {
                     return;
                 }
                 this.lastNotificationTime = now;
+                
+                // Verificar se já existe uma notificação aberta
+                const existingNotification = document.querySelector('.notification-popup-corner');
+                if (existingNotification) {
+                    console.log('⏳ Notificação já existe, pulando...');
+                    return;
+                }
 
                 // Criar pop-up de notificação no canto superior direito
                 const notification = document.createElement('div');
@@ -564,7 +571,7 @@ class RealTimeUpdates {
                 
                 return guardians.map(guardian => `
                     <div class="guardian-item ${guardian.status === 'current' ? 'current-guardian' : ''}" data-guardian-id="${guardian.id}">
-                        <div class="guardian-avatar">
+                        <div class="guardian-avatar" id="avatar-${guardian.id}">
                             ${guardian.status === 'current' ? '👤' : '<div class="loading-spinner-small"></div>'}
                         </div>
                         <div class="guardian-info">
@@ -678,14 +685,23 @@ class RealTimeUpdates {
                 if (currentGuardian) {
                     const voteElement = currentGuardian.querySelector('.guardian-vote');
                     const statusElement = currentGuardian.querySelector('.guardian-status');
+                    const avatarElement = currentGuardian.querySelector('.guardian-avatar');
+                    
                     if (voteElement) {
                         voteElement.innerHTML = this.getVoteIcon(voteData.vote_type);
                     }
                     if (statusElement) {
                         statusElement.textContent = 'Votou';
                     }
+                    if (avatarElement) {
+                        // Trocar avatar pelo emoji do voto
+                        avatarElement.innerHTML = this.getVoteIcon(voteData.vote_type);
+                    }
+                    
+                    // Adicionar classe baseada no tipo de voto
                     currentGuardian.classList.remove('current-guardian');
                     currentGuardian.classList.add('voted-guardian');
+                    currentGuardian.classList.add(`vote-${voteData.vote_type}`);
                 }
 
                 // Mostrar confirmação
