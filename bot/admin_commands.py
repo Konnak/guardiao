@@ -29,7 +29,7 @@ class AdminCommands(commands.Cog):
         """Verifica se o usuário é administrador"""
         # Lista de IDs de administradores (configure conforme necessário)
         admin_ids = [
-            # Adicione os IDs dos administradores aqui
+            1369940071246991380,  # konnakrc - Administrador principal
         ]
         return user.id in admin_ids or user.guild_permissions.administrator
     
