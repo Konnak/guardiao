@@ -547,4 +547,65 @@
     }
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Seleção de opções
+    const optionInputs = document.querySelectorAll('input[name="answer"]');
+    const submitButton = document.getElementById('submit-answer');
+    
+    optionInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // Remover seleção anterior
+            document.querySelectorAll('.option-label').forEach(label => {
+                label.classList.remove('selected');
+            });
+            
+            // Adicionar seleção atual
+            if (this.checked) {
+                this.nextElementSibling.classList.add('selected');
+                submitButton.disabled = false;
+                submitButton.style.opacity = '1';
+            }
+        });
+    });
+    
+    // Submissão do formulário
+    const answerForm = document.getElementById('answer-form');
+    if (answerForm) {
+        answerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const selectedAnswer = document.querySelector('input[name="answer"]:checked');
+            if (!selectedAnswer) {
+                alert('Por favor, selecione uma resposta antes de continuar.');
+                return;
+            }
+            
+            // Desabilitar botão para evitar múltiplos envios
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            
+            // Enviar formulário
+            this.submit();
+        });
+    }
+    
+    // Adicionar classe CSS para opção selecionada
+    const style = document.createElement('style');
+    style.textContent = `
+        .option-label.selected {
+            border-color: var(--logo-gold) !important;
+            background-color: rgba(255, 215, 0, 0.15) !important;
+            transform: scale(1.02);
+        }
+        
+        .option-label.selected .option-letter {
+            background: linear-gradient(135deg, var(--logo-gold), #ff6b35) !important;
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
 {% endblock %}

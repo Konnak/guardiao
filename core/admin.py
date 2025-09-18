@@ -25,11 +25,14 @@ class GuardianAdmin(admin.ModelAdmin):
         ('Informações do Discord', {
             'fields': ('discord_id', 'discord_username', 'discord_display_name', 'avatar_url')
         }),
+        ('Sistema de Papéis', {
+            'fields': ('role', 'discord_account_created_at')
+        }),
         ('Status e Nível', {
             'fields': ('status', 'level', 'points')
         }),
         ('Estatísticas', {
-            'fields': ('total_service_hours', 'correct_votes', 'incorret_votes')
+            'fields': ('total_service_hours', 'correct_votes', 'incorrect_votes')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at', 'last_activity'),
