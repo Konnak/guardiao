@@ -683,6 +683,7 @@ def get_pending_report_for_guardian(request, guardian_id):
                 guardian=guardian,
                 defaults={'is_active': True}
             )
+            print(f"🔍 SessionGuardian - created: {created}, id: {session_guardian.id if session_guardian else 'None'}")
             
             if not created:
                 # Retornar dados da sessão mesmo se já estiver participando
