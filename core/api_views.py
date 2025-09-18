@@ -685,10 +685,44 @@ def get_pending_report_for_guardian(request, guardian_id):
             )
             
             if not created:
-                return Response({
-                    'error': 'Você já está participando desta sessão',
-                    'message': 'Aguarde sua vez de votar'
-                })
+                # Retornar dados da sessão mesmo se já estiver participando
+                session_data = {
+                    'session_id': str(session.id),
+                    'report_id': session.report.id,
+                    'report': {
+                        'id': session.report.id,
+                        'reason': session.report.reason,
+                        'reported_user_id': session.report.reported_user_id,
+                        'reporter_user_id': session.report.reporter_user_id,
+                        'created_at': session.report.created_at.isoformat(),
+                    },
+                    'messages': [],
+                    'voting_deadline': session.voting_deadline.isoformat() if session.voting_deadline else None,
+                    'time_remaining': None
+                }
+                
+                # Calcular tempo restante
+                if session.voting_deadline:
+                    remaining = session.voting_deadline - timezone.now()
+                    session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
+                
+                # Buscar mensagens da denúncia
+                messages = Message.objects.filter(report=session.report).order_by('timestamp')
+                session_data['messages'] = [
+                    {
+                        'id': msg.id,
+                        'original_user_id': msg.original_user_id,
+                        'anonymized_username': msg.anonymized_username,
+                        'content': msg.content,
+                        'timestamp': msg.timestamp.isoformat(),
+                        'is_reported_user': msg.is_reported_user,
+                        'has_attachments': msg.has_attachments,
+                        'attachments_info': msg.attachments_info
+                    }
+                    for msg in messages
+                ]
+                
+                return Response(session_data)
             
             session = existing_session
         else:
