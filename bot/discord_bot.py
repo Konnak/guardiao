@@ -135,19 +135,29 @@ class GuardiaoBot(commands.Bot):
     def start_notification_timer(self):
         """Inicia o timer para notificações agendadas a cada 5 minutos"""
         import asyncio
+        import time
         
         async def notification_loop():
             while True:
                 try:
-                    await asyncio.sleep(300)  # 5 minutos = 300 segundos
+                    # Calcular próximo intervalo de 5 minutos
+                    current_time = time.time()
+                    next_5min = ((int(current_time) // 300) + 1) * 300  # Próximo múltiplo de 5 minutos
+                    wait_time = next_5min - current_time
+                    
+                    print(f"⏰ Próxima verificação em {wait_time:.1f} segundos")
+                    await asyncio.sleep(wait_time)
+                    
+                    # Executar verificação
                     await self.send_scheduled_notifications()
+                    
                 except Exception as e:
                     print(f"❌ Erro no loop de notificações: {e}")
                     await asyncio.sleep(60)  # Aguardar 1 minuto antes de tentar novamente
         
         # Executar o loop em background
         asyncio.create_task(notification_loop())
-        print("⏰ Sistema de notificações agendadas iniciado (5 minutos)")
+        print("⏰ Sistema de notificações agendadas iniciado (verificação a cada 5 minutos)")
     
     async def on_message(self, message):
         """Evento executado quando uma mensagem é enviada"""
@@ -215,25 +225,55 @@ class GuardiaoBot(commands.Bot):
     async def send_scheduled_notifications(self):
         """Envia notificações agendadas a cada 5 minutos para guardiões em serviço"""
         from asgiref.sync import sync_to_async
-        from core.models import ReportQueue
+        from core.models import ReportQueue, VotingSession
         
         try:
-            # Buscar denúncias pendentes
+            # Buscar denúncias pendentes que ainda não foram finalizadas
             pending_reports = await sync_to_async(list)(
                 ReportQueue.objects.filter(status='pending').order_by('created_at')
             )
             
             if not pending_reports:
+                print("📋 Nenhuma denúncia pendente encontrada")
+                return
+            
+            # Verificar quais denúncias ainda estão realmente pendentes
+            truly_pending_reports = []
+            for queue_item in pending_reports:
+                # Verificar se existe uma sessão de votação ativa para esta denúncia
+                active_session = await sync_to_async(VotingSession.objects.filter(
+                    report=queue_item.report,
+                    status__in=['active', 'pending']
+                ).exists)()
+                
+                if not active_session:
+                    # Não há sessão ativa, denúncia ainda está pendente
+                    truly_pending_reports.append(queue_item)
+                else:
+                    # Há sessão ativa, verificar se ainda está em votação
+                    session = await sync_to_async(VotingSession.objects.filter(
+                        report=queue_item.report,
+                        status__in=['active', 'pending']
+                    ).first)()
+                    
+                    if session and session.status in ['active', 'pending']:
+                        # Sessão ainda ativa, denúncia ainda pendente
+                        truly_pending_reports.append(queue_item)
+            
+            if not truly_pending_reports:
+                print("📋 Nenhuma denúncia realmente pendente (todas têm sessões ativas)")
                 return
             
             # Buscar guardiões em serviço
             online_guardians = await sync_to_async(list)(Guardian.objects.filter(status='online'))
             
             if not online_guardians:
+                print("📋 Nenhum guardião online encontrado")
                 return
             
-            # Contar denúncias pendentes
-            pending_count = len(pending_reports)
+            # Contar denúncias realmente pendentes
+            pending_count = len(truly_pending_reports)
+            print(f"📋 Encontradas {pending_count} denúncias realmente pendentes")
             
             for guardian in online_guardians:
                 try:
