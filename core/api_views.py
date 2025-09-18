@@ -553,7 +553,7 @@ def get_pending_report_for_guardian(request, guardian_id):
                 else:
                     return Response({'error': f'Guardião com ID {guardian_id} não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         
-        # Verificar se já está em uma sessão ativa
+        # Verificar se já está em uma sessão ativa SEM TER VOTADO
         active_session = SessionGuardian.objects.filter(
             guardian=guardian,
             is_active=True,
@@ -561,42 +561,50 @@ def get_pending_report_for_guardian(request, guardian_id):
         ).first()
         
         if active_session:
-            # Retornar a sessão atual
-            session_data = {
-                'session_id': str(active_session.session.id),
-                'report_id': active_session.session.report.id,
-                'report': {
-                    'id': active_session.session.report.id,
-                    'reason': active_session.session.report.reason,
-                    'reported_user_id': active_session.session.report.reported_user_id,
-                    'reporter_user_id': active_session.session.report.reporter_user_id,
-                    'created_at': active_session.session.report.created_at.isoformat(),
-                },
-                'messages': [],
-                'voting_deadline': active_session.session.voting_deadline.isoformat() if active_session.session.voting_deadline else None,
-                'time_remaining': None
-            }
-            
-            # Calcular tempo restante
-            if active_session.session.voting_deadline:
-                remaining = active_session.session.voting_deadline - timezone.now()
-                session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
-            
-            # Buscar mensagens da denúncia
-            messages = Message.objects.filter(report=active_session.session.report).order_by('timestamp')
-            session_data['messages'] = [
-                {
-                    'id': msg.id,
-                    'original_user_id': msg.original_user_id,
-                    'anonymized_username': msg.anonymized_username,
-                    'content': msg.content,
-                    'timestamp': msg.timestamp.isoformat(),
-                    'is_reported_user': msg.is_reported_user
+            # Verificar se a sessão ainda está válida (não expirou)
+            if active_session.session.voting_deadline and active_session.session.voting_deadline < timezone.now():
+                # Sessão expirada - marcar como inativa e continuar
+                active_session.is_active = False
+                active_session.left_at = timezone.now()
+                active_session.save()
+                print(f"⏰ Sessão expirada para guardião {guardian.discord_display_name}")
+            else:
+                # Retornar a sessão atual válida
+                session_data = {
+                    'session_id': str(active_session.session.id),
+                    'report_id': active_session.session.report.id,
+                    'report': {
+                        'id': active_session.session.report.id,
+                        'reason': active_session.session.report.reason,
+                        'reported_user_id': active_session.session.report.reported_user_id,
+                        'reporter_user_id': active_session.session.report.reporter_user_id,
+                        'created_at': active_session.session.report.created_at.isoformat(),
+                    },
+                    'messages': [],
+                    'voting_deadline': active_session.session.voting_deadline.isoformat() if active_session.session.voting_deadline else None,
+                    'time_remaining': None
                 }
-                for msg in messages
-            ]
-            
-            return Response(session_data)
+                
+                # Calcular tempo restante
+                if active_session.session.voting_deadline:
+                    remaining = active_session.session.voting_deadline - timezone.now()
+                    session_data['time_remaining'] = max(0, int(remaining.total_seconds()))
+                
+                # Buscar mensagens da denúncia
+                messages = Message.objects.filter(report=active_session.session.report).order_by('timestamp')
+                session_data['messages'] = [
+                    {
+                        'id': msg.id,
+                        'original_user_id': msg.original_user_id,
+                        'anonymized_username': msg.anonymized_username,
+                        'content': msg.content,
+                        'timestamp': msg.timestamp.isoformat(),
+                        'is_reported_user': msg.is_reported_user
+                    }
+                    for msg in messages
+                ]
+                
+                return Response(session_data)
         
         # Buscar próxima denúncia na fila (pending ou assigned)
         queue_item = ReportQueue.objects.filter(
