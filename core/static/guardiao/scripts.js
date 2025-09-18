@@ -323,6 +323,8 @@ class RealTimeUpdates {
                         console.log('⏸️ Guardião offline - não verificando denúncias pendentes');
                         // Fechar modal se estiver aberto
                         this.closeVotingModal();
+                        // Fechar notificação se estiver aberta
+                        this.dismissNotification();
                         return;
                     }
 
@@ -501,21 +503,15 @@ class RealTimeUpdates {
                                     <h3>Como você acha que o usuário se comportou?</h3>
                                     <div class="vote-buttons-new">
                                         <button class="vote-btn-new ok-btn-new" data-vote="improcedente">
-                                            <div class="vote-icon">
-                                                <div class="loading-spinner"></div>
-                                            </div>
+                                            <div class="vote-icon">😇</div>
                                             <span>OK</span>
                                         </button>
                                         <button class="vote-btn-new intimidou-btn-new" data-vote="intimidou">
-                                            <div class="vote-icon">
-                                                <div class="loading-spinner"></div>
-                                            </div>
+                                            <div class="vote-icon">😐</div>
                                             <span>Intimidou</span>
                                         </button>
                                         <button class="vote-btn-new grave-btn-new" data-vote="grave">
-                                            <div class="vote-icon">
-                                                <div class="loading-spinner"></div>
-                                            </div>
+                                            <div class="vote-icon">😈</div>
                                             <span>GRAVE</span>
                                         </button>
                                     </div>
@@ -569,7 +565,7 @@ class RealTimeUpdates {
                 return guardians.map(guardian => `
                     <div class="guardian-item ${guardian.status === 'current' ? 'current-guardian' : ''}" data-guardian-id="${guardian.id}">
                         <div class="guardian-avatar">
-                            ${guardian.status === 'current' ? '👤' : '⏳'}
+                            ${guardian.status === 'current' ? '👤' : '<div class="loading-spinner-small"></div>'}
                         </div>
                         <div class="guardian-info">
                             <span class="guardian-name">${guardian.name}</span>

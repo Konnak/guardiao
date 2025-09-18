@@ -624,7 +624,7 @@ def get_guardian_status(request, guardian_id):
                     discord_id=guardian_id,
                     discord_username="TestUser",
                     discord_display_name="Usuário de Teste",
-                    status='online',
+                    status='offline',
                     level=1,
                     points=0
                 )
@@ -792,13 +792,16 @@ def cast_vote_in_session(request):
             report.save()
             
             # Atualizar fila
-            queue_item = ReportQueue.objects.get(report=report)
-            queue_item.status = 'completed'
-            queue_item.completed_at = timezone.now()
-            queue_item.save()
+            try:
+                queue_item = ReportQueue.objects.get(report=report)
+                queue_item.status = 'completed'
+                queue_item.completed_at = timezone.now()
+                queue_item.save()
+            except ReportQueue.DoesNotExist:
+                print(f"⚠️ Item da fila não encontrado para denúncia {report.id}")
             
             # Notificar bot para aplicar punição
-            notify_bot_apply_punishment(report)
+            # notify_bot_apply_punishment(report) # Desabilitado por enquanto
         
         return Response({
             'success': True,
