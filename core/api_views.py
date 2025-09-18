@@ -732,6 +732,8 @@ def get_pending_report_for_guardian(request, guardian_id):
         
         # Buscar mensagens da denúncia
         messages = Message.objects.filter(report=session.report).order_by('timestamp')
+        print(f"🔍 Mensagens encontradas para denúncia {session.report.id}: {messages.count()}")
+        
         session_data['messages'] = [
             {
                 'id': msg.id,
@@ -743,6 +745,8 @@ def get_pending_report_for_guardian(request, guardian_id):
             }
             for msg in messages
         ]
+        
+        print(f"🔍 Mensagens retornadas: {len(session_data['messages'])}")
         
         return Response(session_data)
         

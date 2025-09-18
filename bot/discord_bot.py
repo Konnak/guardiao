@@ -332,8 +332,8 @@ async def report_command(
             await interaction.followup.send("❌ Você não pode se reportar!", ephemeral=True)
             return
         
-        # Coletar mensagens recentes do canal
-        recent_messages = bot.message_cache.get_recent_messages(interaction.channel.id, 50)
+        # Coletar mensagens recentes do canal (até 100 mensagens)
+        recent_messages = bot.message_cache.get_recent_messages(interaction.channel.id, 100)
         
         # Criar denúncia no banco de dados
         from asgiref.sync import sync_to_async
