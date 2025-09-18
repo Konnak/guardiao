@@ -599,7 +599,9 @@ def get_pending_report_for_guardian(request, guardian_id):
                         'anonymized_username': msg.anonymized_username,
                         'content': msg.content,
                         'timestamp': msg.timestamp.isoformat(),
-                        'is_reported_user': msg.is_reported_user
+                        'is_reported_user': msg.is_reported_user,
+                        'has_attachments': msg.has_attachments,
+                        'attachments_info': msg.attachments_info
                     }
                     for msg in messages
                 ]
@@ -741,7 +743,9 @@ def get_pending_report_for_guardian(request, guardian_id):
                 'anonymized_username': msg.anonymized_username,
                 'content': msg.content,
                 'timestamp': msg.timestamp.isoformat(),
-                'is_reported_user': msg.is_reported_user
+                'is_reported_user': msg.is_reported_user,
+                'has_attachments': msg.has_attachments,
+                'attachments_info': msg.attachments_info
             }
             for msg in messages
         ]

@@ -219,6 +219,10 @@ class Message(models.Model):
     anonymized_username = models.CharField(max_length=100, verbose_name="Nome Anonimizado")
     content = models.TextField(verbose_name="Conteúdo da Mensagem")
     
+    # Mídias anexadas
+    has_attachments = models.BooleanField(default=False, verbose_name="Tem Anexos")
+    attachments_info = models.JSONField(blank=True, null=True, verbose_name="Informações dos Anexos")
+    
     # Metadados
     timestamp = models.DateTimeField(verbose_name="Timestamp")
     is_reported_user = models.BooleanField(default=False, verbose_name="É o Usuário Denunciado")

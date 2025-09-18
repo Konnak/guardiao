@@ -332,15 +332,21 @@ async def report_command(
             await interaction.followup.send("❌ Você não pode se reportar!", ephemeral=True)
             return
         
-        # SEMPRE buscar histórico completo do canal (até 100 mensagens)
-        print(f"🔍 Buscando histórico completo do canal {interaction.channel.id}...")
+        # SEMPRE buscar histórico completo do canal (até 100 mensagens das últimas 24h)
+        print(f"🔍 Buscando histórico completo do canal {interaction.channel.id} (últimas 24h)...")
         recent_messages = []
         
         try:
             # Buscar últimas 100 mensagens do canal diretamente
             async for message in interaction.channel.history(limit=100):
-                recent_messages.append(message)
-            print(f"✅ Coletadas {len(recent_messages)} mensagens do histórico do canal")
+                # Filtrar apenas mensagens das últimas 24 horas
+                message_age = datetime.now() - message.created_at.replace(tzinfo=None)
+                if message_age.total_seconds() <= 86400:  # 24 horas = 86400 segundos
+                    recent_messages.append(message)
+                else:
+                    # Se a mensagem é mais antiga que 24h, parar de buscar
+                    break
+            print(f"✅ Coletadas {len(recent_messages)} mensagens das últimas 24h do canal")
         except Exception as e:
             print(f"❌ Erro ao buscar mensagens do canal: {e}")
             # Fallback: tentar usar cache se houver erro
@@ -378,11 +384,50 @@ async def report_command(
             if msg.author.id not in user_mapping:
                 if msg.author.id == usuario.id:
                     user_mapping[msg.author.id] = "Usuário Denunciado"
-                elif msg.author.id == interaction.user.id:
-                    user_mapping[msg.author.id] = "Denunciante"
                 else:
+                    # Todos os outros usuários (incluindo denunciante) são anonimizados
                     user_mapping[msg.author.id] = f"Usuário {user_counter}"
                     user_counter += 1
+            
+            # Coletar informações de mídias/anexos
+            attachments_info = []
+            has_attachments = False
+            
+            if msg.attachments:
+                has_attachments = True
+                for attachment in msg.attachments:
+                    attachment_info = {
+                        'filename': attachment.filename,
+                        'url': attachment.url,
+                        'size': attachment.size,
+                        'content_type': attachment.content_type,
+                        'is_image': attachment.content_type and attachment.content_type.startswith('image/'),
+                        'is_video': attachment.content_type and attachment.content_type.startswith('video/'),
+                    }
+                    attachments_info.append(attachment_info)
+            
+            # Coletar emojis customizados
+            if msg.emojis:
+                has_attachments = True
+                for emoji in msg.emojis:
+                    emoji_info = {
+                        'name': emoji.name,
+                        'url': str(emoji.url) if emoji.url else None,
+                        'is_custom': emoji.id is not None,
+                        'type': 'custom_emoji'
+                    }
+                    attachments_info.append(emoji_info)
+            
+            # Coletar stickers
+            if msg.stickers:
+                has_attachments = True
+                for sticker in msg.stickers:
+                    sticker_info = {
+                        'name': sticker.name,
+                        'url': str(sticker.url) if sticker.url else None,
+                        'type': 'sticker'
+                    }
+                    attachments_info.append(sticker_info)
             
             await sync_to_async(Message.objects.create)(
                 report=report,
@@ -390,6 +435,8 @@ async def report_command(
                 original_message_id=msg.id,
                 anonymized_username=user_mapping[msg.author.id],
                 content=msg.content,
+                has_attachments=has_attachments,
+                attachments_info=attachments_info if attachments_info else None,
                 timestamp=msg.created_at,
                 is_reported_user=(msg.author.id == usuario.id)
             )
