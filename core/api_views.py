@@ -908,6 +908,9 @@ def cast_vote_in_session(request):
     """
     Endpoint para registrar voto em uma sessão de votação
     """
+    print(f"🔍 cast_vote_in_session - View chamada! Método: {request.method}")
+    print(f"🔍 cast_vote_in_session - URL: {request.path}")
+    
     try:
         from django.utils import timezone
         
