@@ -1,0 +1,421 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Sistema Guardião{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header de Boas-vindas -->
+    <div class="welcome-header">
+        <div class="welcome-content">
+            <div class="welcome-icon">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="welcome-text">
+                <h1>Bem-vindo, {{ guardian.discord_display_name }}!</h1>
+                <p class="welcome-subtitle">Você está conectado ao Sistema Guardião</p>
+            </div>
+        </div>
+        
+        {% if guardian.is_eligible_for_guardian %}
+            <div class="become-guardian-section">
+                <div class="become-guardian-card">
+                    <div class="guardian-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="guardian-content">
+                        <h2>Torne-se um Guardião</h2>
+                        <p class="guardian-description">
+                            Proteja sua comunidade! Torne-se um Guardião e ajude a manter o servidor seguro e justo.
+                        </p>
+                        <div class="guardian-benefits">
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Analise denúncias de forma imparcial</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Ganhe pontos e suba de nível</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Faça parte da equipe de moderação</span>
+                            </div>
+                        </div>
+                        <a href="{% url 'training_start' %}" class="btn btn-primary btn-large">
+                            <i class="fas fa-graduation-cap"></i>
+                            Iniciar Treinamento
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="not-eligible-section">
+                <div class="not-eligible-card">
+                    <div class="not-eligible-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="not-eligible-content">
+                        <h2>Conta Muito Nova</h2>
+                        <p class="not-eligible-description">
+                            Sua conta Discord precisa ter pelo menos 3 meses para se tornar um Guardião.
+                            Continue participando da comunidade e volte quando sua conta for mais antiga!
+                        </p>
+                        <div class="account-info">
+                            <div class="info-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Conta criada em: {{ guardian.discord_account_created_at|date:"d/m/Y" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-hourglass-half"></i>
+                                <span>Faltam {{ guardian.days_until_eligible }} dias para ser elegível</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Informações da Conta -->
+    <div class="account-info-section">
+        <div class="info-card">
+            <h3>
+                <i class="fas fa-info-circle"></i>
+                Informações da Conta
+            </h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Nome de Usuário:</label>
+                    <span>{{ guardian.discord_display_name }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Papel Atual:</label>
+                    <span class="role-badge role-usuario">
+                        <i class="fas fa-user"></i>
+                        Usuário
+                    </span>
+                </div>
+                <div class="info-item">
+                    <label>Conta Criada:</label>
+                    <span>{{ guardian.discord_account_created_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Última Atividade:</label>
+                    <span>{{ guardian.last_activity|date:"d/m/Y H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema de Pontos (Preview) -->
+    <div class="points-preview-section">
+        <div class="points-preview-card">
+            <h3>
+                <i class="fas fa-star"></i>
+                Sistema de Pontos (Preview)
+            </h3>
+            <p class="points-description">
+                Como Guardião, você poderá ganhar pontos analisando denúncias e mantendo-se ativo no sistema.
+            </p>
+            <div class="points-preview-grid">
+                <div class="preview-item">
+                    <i class="fas fa-vote-yea"></i>
+                    <span>Votos Corretos</span>
+                    <strong>+2 pontos</strong>
+                </div>
+                <div class="preview-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Tempo de Serviço</span>
+                    <strong>+1 ponto/hora</strong>
+                </div>
+                <div class="preview-item">
+                    <i class="fas fa-trophy"></i>
+                    <span>Níveis</span>
+                    <strong>Novato → Mestre</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.welcome-header {
+    margin-bottom: var(--spacing-xl);
+}
+
+.welcome-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--logo-gold), var(--logo-teal));
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.welcome-icon {
+    font-size: 4rem;
+    color: white;
+    opacity: 0.9;
+}
+
+.welcome-text h1 {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+}
+
+.welcome-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.become-guardian-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.become-guardian-card {
+    display: flex;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--logo-gold);
+}
+
+.guardian-icon {
+    font-size: 3rem;
+    color: var(--logo-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(0, 128, 128, 0.1));
+    border-radius: 50%;
+}
+
+.guardian-content h2 {
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+}
+
+.guardian-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+.guardian-benefits {
+    margin-bottom: var(--spacing-xl);
+}
+
+.benefit-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.benefit-item i {
+    color: var(--logo-gold);
+    font-size: 1.1rem;
+}
+
+.btn-large {
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.not-eligible-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.not-eligible-card {
+    display: flex;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--accent-warning);
+}
+
+.not-eligible-icon {
+    font-size: 3rem;
+    color: var(--accent-warning);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: rgba(210, 153, 34, 0.1);
+    border-radius: 50%;
+}
+
+.not-eligible-content h2 {
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+}
+
+.not-eligible-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+.account-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.account-info-section,
+.points-preview-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.info-card,
+.points-preview-card {
+    padding: var(--spacing-xl);
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.info-card h3,
+.points-preview-card h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.info-card h3 i,
+.points-preview-card h3 i {
+    color: var(--logo-gold);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.info-item label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.role-usuario {
+    background-color: rgba(100, 100, 100, 0.1);
+    color: var(--text-secondary);
+}
+
+.points-description {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+}
+
+.points-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.preview-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--spacing-lg);
+    background-color: var(--tertiary-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--logo-gold);
+}
+
+.preview-item i {
+    font-size: 2rem;
+    color: var(--logo-gold);
+    margin-bottom: var(--spacing-sm);
+}
+
+.preview-item span {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.preview-item strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .welcome-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .become-guardian-card,
+    .not-eligible-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .points-preview-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

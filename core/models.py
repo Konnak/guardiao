@@ -7,6 +7,11 @@ import uuid
 class Guardian(models.Model):
     """Modelo para representar um Guardião do sistema"""
     
+    ROLE_CHOICES = [
+        ('usuario', 'Usuário'),
+        ('guardian', 'Guardião'),
+    ]
+    
     STATUS_CHOICES = [
         ('online', 'Em Serviço'),
         ('offline', 'Fora de Serviço'),
@@ -24,6 +29,10 @@ class Guardian(models.Model):
     discord_username = models.CharField(max_length=100, verbose_name="Nome de Usuário")
     discord_display_name = models.CharField(max_length=100, verbose_name="Nome de Exibição")
     avatar_url = models.URLField(blank=True, null=True, verbose_name="URL do Avatar")
+    
+    # Sistema de papéis e treinamento
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='usuario', verbose_name="Papel")
+    discord_account_created_at = models.DateTimeField(null=True, blank=True, verbose_name="Data de Criação da Conta Discord")
     
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='offline', verbose_name="Status")
     level = models.IntegerField(choices=LEVEL_CHOICES, default=1, verbose_name="Nível")
@@ -52,6 +61,40 @@ class Guardian(models.Model):
         if total_votes == 0:
             return 0
         return round((self.correct_votes / total_votes) * 100, 2)
+    
+    @property
+    def is_eligible_for_guardian(self):
+        """Verifica se o usuário é elegível para se tornar Guardião (conta > 3 meses)"""
+        if not self.discord_account_created_at:
+            return False
+        
+        from datetime import timedelta
+        three_months_ago = timezone.now() - timedelta(days=90)
+        return self.discord_account_created_at <= three_months_ago
+    
+    @property
+    def is_guardian(self):
+        """Verifica se o usuário é um Guardião"""
+        return self.role == 'guardian'
+    
+    @property
+    def is_usuario(self):
+        """Verifica se o usuário é apenas um Usuário"""
+        return self.role == 'usuario'
+    
+    @property
+    def days_until_eligible(self):
+        """Calcula quantos dias faltam para ser elegível (se não for elegível)"""
+        if self.is_eligible_for_guardian:
+            return 0
+        
+        if not self.discord_account_created_at:
+            return 90  # Assumir 90 dias se não souber a data
+        
+        from datetime import timedelta
+        three_months_ago = timezone.now() - timedelta(days=90)
+        days_since_creation = (timezone.now() - self.discord_account_created_at).days
+        return max(0, 90 - days_since_creation)
 
 
 class Report(models.Model):
@@ -393,3 +436,141 @@ class ReportQueue(models.Model):
     
     def __str__(self):
         return f"Fila #{self.id} - Denúncia #{self.report.id} ({self.get_status_display()})"
+
+
+# ===== SISTEMA DE TREINAMENTO =====
+
+class TrainingSection(models.Model):
+    """Modelo para seções do treinamento"""
+    
+    SECTION_CHOICES = [
+        ('principios', 'Os Princípios do Guardião'),
+        ('classificacao', 'Classificando uma Denúncia'),
+        ('prova_final', 'Prova Final'),
+    ]
+    
+    title = models.CharField(max_length=200, verbose_name="Título")
+    section_type = models.CharField(max_length=20, choices=SECTION_CHOICES, verbose_name="Tipo de Seção")
+    content = models.TextField(verbose_name="Conteúdo")
+    order = models.IntegerField(default=0, verbose_name="Ordem")
+    
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    
+    class Meta:
+        verbose_name = "Seção de Treinamento"
+        verbose_name_plural = "Seções de Treinamento"
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_section_type_display()})"
+
+
+class TrainingExercise(models.Model):
+    """Modelo para exercícios do treinamento"""
+    
+    section = models.ForeignKey(TrainingSection, on_delete=models.CASCADE, related_name='exercises', verbose_name="Seção")
+    question = models.TextField(verbose_name="Pergunta")
+    
+    # Opções de resposta
+    option_a = models.CharField(max_length=500, verbose_name="Opção A")
+    option_b = models.CharField(max_length=500, verbose_name="Opção B")
+    option_c = models.CharField(max_length=500, verbose_name="Opção C", blank=True, null=True)
+    
+    # Resposta correta
+    correct_answer = models.CharField(max_length=1, choices=[('a', 'A'), ('b', 'B'), ('c', 'C')], verbose_name="Resposta Correta")
+    
+    # Explicação da resposta
+    explanation = models.TextField(verbose_name="Explicação")
+    
+    order = models.IntegerField(default=0, verbose_name="Ordem")
+    is_active = models.BooleanField(default=True, verbose_name="Ativo")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    
+    class Meta:
+        verbose_name = "Exercício de Treinamento"
+        verbose_name_plural = "Exercícios de Treinamento"
+        ordering = ['section', 'order']
+    
+    def __str__(self):
+        return f"{self.section.title} - {self.question[:50]}..."
+
+
+class TrainingProgress(models.Model):
+    """Modelo para acompanhar o progresso do treinamento"""
+    
+    STATUS_CHOICES = [
+        ('not_started', 'Não Iniciado'),
+        ('in_progress', 'Em Andamento'),
+        ('completed', 'Concluído'),
+        ('failed', 'Reprovado'),
+    ]
+    
+    guardian = models.ForeignKey(Guardian, on_delete=models.CASCADE, related_name='training_progress', verbose_name="Guardião")
+    section = models.ForeignKey(TrainingSection, on_delete=models.CASCADE, verbose_name="Seção")
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started', verbose_name="Status")
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name="Iniciado em")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Concluído em")
+    
+    # Para exercícios
+    exercises_completed = models.IntegerField(default=0, verbose_name="Exercícios Concluídos")
+    exercises_correct = models.IntegerField(default=0, verbose_name="Exercícios Corretos")
+    
+    # Para prova final
+    final_exam_score = models.IntegerField(default=0, verbose_name="Pontuação da Prova Final")
+    final_exam_attempts = models.IntegerField(default=0, verbose_name="Tentativas da Prova Final")
+    last_exam_attempt = models.DateTimeField(null=True, blank=True, verbose_name="Última Tentativa da Prova")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    
+    class Meta:
+        verbose_name = "Progresso do Treinamento"
+        verbose_name_plural = "Progressos do Treinamento"
+        unique_together = ['guardian', 'section']
+        ordering = ['guardian', 'section__order']
+    
+    def __str__(self):
+        return f"{self.guardian.discord_display_name} - {self.section.title} ({self.get_status_display()})"
+    
+    @property
+    def can_retake_exam(self):
+        """Verifica se pode refazer a prova (após 24 horas)"""
+        if not self.last_exam_attempt:
+            return True
+        
+        from datetime import timedelta
+        twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+        return self.last_exam_attempt <= twenty_four_hours_ago
+    
+    @property
+    def accuracy_percentage(self):
+        """Calcula a porcentagem de acerto nos exercícios"""
+        if self.exercises_completed == 0:
+            return 0
+        return round((self.exercises_correct / self.exercises_completed) * 100, 2)
+
+
+class TrainingAnswer(models.Model):
+    """Modelo para armazenar respostas dos exercícios"""
+    
+    progress = models.ForeignKey(TrainingProgress, on_delete=models.CASCADE, related_name='answers', verbose_name="Progresso")
+    exercise = models.ForeignKey(TrainingExercise, on_delete=models.CASCADE, verbose_name="Exercício")
+    
+    selected_answer = models.CharField(max_length=1, choices=[('a', 'A'), ('b', 'B'), ('c', 'C')], verbose_name="Resposta Selecionada")
+    is_correct = models.BooleanField(verbose_name="Correta")
+    
+    answered_at = models.DateTimeField(auto_now_add=True, verbose_name="Respondido em")
+    
+    class Meta:
+        verbose_name = "Resposta de Exercício"
+        verbose_name_plural = "Respostas de Exercícios"
+        unique_together = ['progress', 'exercise']
+        ordering = ['answered_at']
+    
+    def __str__(self):
+        return f"{self.progress.guardian.discord_display_name} - {self.exercise.question[:30]}... ({'✓' if self.is_correct else '✗'})"

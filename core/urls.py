@@ -11,6 +11,12 @@ urlpatterns = [
     path('reports/', views.reports_list, name='reports_list'),
     # path('report/<int:report_id>/', views.report_detail, name='report_detail'),  # REMOVIDO - expõe informações sensíveis
     
+    # Sistema de Treinamento
+    path('training/', views.training_start, name='training_start'),
+    path('training/section/<int:section_id>/', views.training_section, name='training_section'),
+    path('training/exercise/<int:exercise_id>/', views.training_exercise, name='training_exercise'),
+    path('training/answer/<int:exercise_id>/', views.training_answer, name='training_answer'),
+    
     # Autenticação
     path('auth/discord/', views.discord_login, name='discord_login'),
     path('auth/discord/callback/', views.discord_callback, name='discord_callback'),

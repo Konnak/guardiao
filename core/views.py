@@ -77,6 +77,16 @@ def discord_callback(request):
         user_response = requests.get('https://discord.com/api/users/@me', headers=headers)
         user_data = user_response.json()
         
+        # Buscar data de criação da conta Discord
+        discord_account_created_at = None
+        if 'id' in user_data:
+            # Converter Discord ID para timestamp (Discord IDs contêm timestamp de criação)
+            discord_id = int(user_data['id'])
+            # Discord IDs são snowflakes que contêm timestamp
+            # Os primeiros 22 bits são o timestamp (em milissegundos desde 2015-01-01)
+            timestamp_ms = (discord_id >> 22) + 1420070400000  # 1420070400000 é o epoch do Discord
+            discord_account_created_at = timezone.datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+        
         # Criar ou atualizar perfil do Guardião
         guardian, created = Guardian.objects.get_or_create(
             discord_id=user_data['id'],
@@ -84,6 +94,8 @@ def discord_callback(request):
                 'discord_username': user_data['username'],
                 'discord_display_name': user_data.get('display_name') or user_data['username'],
                 'avatar_url': f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None,
+                'role': 'usuario',  # Sempre começar como USUARIO
+                'discord_account_created_at': discord_account_created_at,
                 'status': 'offline',  # Começar como offline
                 'level': 1,
                 'points': 0,
@@ -91,14 +103,19 @@ def discord_callback(request):
         )
         
         if not created:
-            # Atualizar informações
+            # Atualizar informações (mas manter role se já for guardian)
             guardian.discord_username = user_data['username']
             guardian.discord_display_name = user_data.get('display_name') or user_data['username']
             guardian.avatar_url = f"https://cdn.discordapp.com/avatars/{user_data['id']}/{user_data['avatar']}.png" if user_data.get('avatar') else None
+            
+            # Atualizar data de criação se não estiver definida
+            if not guardian.discord_account_created_at and discord_account_created_at:
+                guardian.discord_account_created_at = discord_account_created_at
+            
             guardian.save()
-            print(f"✅ Guardião existente atualizado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
+            print(f"✅ Guardião existente atualizado: {guardian.discord_display_name} (ID: {guardian.discord_id}, Role: {guardian.role})")
         else:
-            print(f"🆕 Novo Guardião criado: {guardian.discord_display_name} (ID: {guardian.discord_id})")
+            print(f"🆕 Novo Guardião criado: {guardian.discord_display_name} (ID: {guardian.discord_id}, Role: {guardian.role})")
         
         # Criar sessão de usuário
         request.session['guardian_id'] = guardian.discord_id  # Usar discord_id para API
@@ -114,7 +131,7 @@ def discord_callback(request):
 
 
 def dashboard(request):
-    """Dashboard do Guardião"""
+    """Dashboard do Guardião/Usuário"""
     guardian_discord_id = request.session.get('guardian_id')
     
     if not guardian_discord_id:
@@ -124,7 +141,7 @@ def dashboard(request):
     try:
         guardian = Guardian.objects.get(discord_id=guardian_discord_id)
     except Guardian.DoesNotExist:
-        messages.error(request, 'Perfil de Guardião não encontrado. Faça login novamente.')
+        messages.error(request, 'Perfil de usuário não encontrado. Faça login novamente.')
         request.session.flush()
         return redirect('discord_login')
     
@@ -132,7 +149,11 @@ def dashboard(request):
         'guardian': guardian,
     }
     
-    return render(request, 'core/dashboard.html', context)
+    # Renderizar template baseado no role
+    if guardian.is_guardian:
+        return render(request, 'core/dashboard_guardian.html', context)
+    else:
+        return render(request, 'core/dashboard_usuario.html', context)
 
 
 def report_detail(request, report_id):
@@ -276,6 +297,263 @@ class StatusToggleView(View):
         except Exception as e:
             print(f"❌ Erro: {e}")
             return JsonResponse({'error': str(e)}, status=500)
+
+
+# ===== SISTEMA DE TREINAMENTO =====
+
+def training_start(request):
+    """Iniciar treinamento"""
+    guardian_discord_id = request.session.get('guardian_id')
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('discord_login')
+    
+    # Verificar se é elegível
+    if not guardian.is_eligible_for_guardian:
+        messages.error(request, 'Sua conta precisa ter pelo menos 3 meses para se tornar um Guardião.')
+        return redirect('dashboard')
+    
+    # Verificar se já é Guardião
+    if guardian.is_guardian:
+        messages.info(request, 'Você já é um Guardião!')
+        return redirect('dashboard')
+    
+    # Obter seções de treinamento
+    sections = TrainingSection.objects.filter(is_active=True).order_by('order')
+    
+    context = {
+        'guardian': guardian,
+        'sections': sections,
+    }
+    
+    return render(request, 'core/training_start.html', context)
+
+
+def training_section(request, section_id):
+    """Página de uma seção de treinamento"""
+    guardian_discord_id = request.session.get('guardian_id')
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('discord_login')
+    
+    # Verificar se é elegível
+    if not guardian.is_eligible_for_guardian:
+        messages.error(request, 'Sua conta precisa ter pelo menos 3 meses para se tornar um Guardião.')
+        return redirect('dashboard')
+    
+    # Verificar se já é Guardião
+    if guardian.is_guardian:
+        messages.info(request, 'Você já é um Guardião!')
+        return redirect('dashboard')
+    
+    try:
+        section = TrainingSection.objects.get(id=section_id, is_active=True)
+    except TrainingSection.DoesNotExist:
+        messages.error(request, 'Seção de treinamento não encontrada.')
+        return redirect('training_start')
+    
+    # Obter ou criar progresso
+    progress, created = TrainingProgress.objects.get_or_create(
+        guardian=guardian,
+        section=section,
+        defaults={'status': 'in_progress', 'started_at': timezone.now()}
+    )
+    
+    # Obter exercícios da seção
+    exercises = TrainingExercise.objects.filter(section=section, is_active=True).order_by('order')
+    
+    context = {
+        'guardian': guardian,
+        'section': section,
+        'progress': progress,
+        'exercises': exercises,
+    }
+    
+    return render(request, 'core/training_section.html', context)
+
+
+def training_exercise(request, exercise_id):
+    """Página de um exercício específico"""
+    guardian_discord_id = request.session.get('guardian_id')
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('discord_login')
+    
+    # Verificar se é elegível
+    if not guardian.is_eligible_for_guardian:
+        messages.error(request, 'Sua conta precisa ter pelo menos 3 meses para se tornar um Guardião.')
+        return redirect('dashboard')
+    
+    # Verificar se já é Guardião
+    if guardian.is_guardian:
+        messages.info(request, 'Você já é um Guardião!')
+        return redirect('dashboard')
+    
+    try:
+        exercise = TrainingExercise.objects.get(id=exercise_id, is_active=True)
+    except TrainingExercise.DoesNotExist:
+        messages.error(request, 'Exercício não encontrado.')
+        return redirect('training_start')
+    
+    # Obter progresso da seção
+    try:
+        progress = TrainingProgress.objects.get(guardian=guardian, section=exercise.section)
+    except TrainingProgress.DoesNotExist:
+        messages.error(request, 'Progresso não encontrado.')
+        return redirect('training_start')
+    
+    # Verificar se já respondeu este exercício
+    existing_answer = TrainingAnswer.objects.filter(progress=progress, exercise=exercise).first()
+    
+    context = {
+        'guardian': guardian,
+        'exercise': exercise,
+        'progress': progress,
+        'existing_answer': existing_answer,
+    }
+    
+    return render(request, 'core/training_exercise.html', context)
+
+
+def training_answer(request, exercise_id):
+    """Processar resposta de exercício"""
+    if request.method != 'POST':
+        return redirect('training_exercise', exercise_id=exercise_id)
+    
+    guardian_discord_id = request.session.get('guardian_id')
+    
+    if not guardian_discord_id:
+        messages.error(request, 'Você precisa fazer login para acessar esta página.')
+        return redirect('discord_login')
+    
+    try:
+        guardian = Guardian.objects.get(discord_id=guardian_discord_id)
+    except Guardian.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('discord_login')
+    
+    # Verificar se é elegível
+    if not guardian.is_eligible_for_guardian:
+        messages.error(request, 'Sua conta precisa ter pelo menos 3 meses para se tornar um Guardião.')
+        return redirect('dashboard')
+    
+    # Verificar se já é Guardião
+    if guardian.is_guardian:
+        messages.info(request, 'Você já é um Guardião!')
+        return redirect('dashboard')
+    
+    try:
+        exercise = TrainingExercise.objects.get(id=exercise_id, is_active=True)
+    except TrainingExercise.DoesNotExist:
+        messages.error(request, 'Exercício não encontrado.')
+        return redirect('training_start')
+    
+    # Obter progresso da seção
+    try:
+        progress = TrainingProgress.objects.get(guardian=guardian, section=exercise.section)
+    except TrainingProgress.DoesNotExist:
+        messages.error(request, 'Progresso não encontrado.')
+        return redirect('training_start')
+    
+    # Verificar se já respondeu este exercício
+    existing_answer = TrainingAnswer.objects.filter(progress=progress, exercise=exercise).first()
+    if existing_answer:
+        messages.info(request, 'Você já respondeu este exercício.')
+        return redirect('training_exercise', exercise_id=exercise_id)
+    
+    # Processar resposta
+    selected_answer = request.POST.get('answer')
+    if not selected_answer or selected_answer not in ['a', 'b', 'c']:
+        messages.error(request, 'Resposta inválida.')
+        return redirect('training_exercise', exercise_id=exercise_id)
+    
+    # Verificar se está correto
+    is_correct = selected_answer == exercise.correct_answer
+    
+    # Salvar resposta
+    TrainingAnswer.objects.create(
+        progress=progress,
+        exercise=exercise,
+        selected_answer=selected_answer,
+        is_correct=is_correct
+    )
+    
+    # Atualizar progresso
+    progress.exercises_completed += 1
+    if is_correct:
+        progress.exercises_correct += 1
+    
+    # Verificar se completou todos os exercícios da seção
+    total_exercises = TrainingExercise.objects.filter(section=exercise.section, is_active=True).count()
+    if progress.exercises_completed >= total_exercises:
+        progress.status = 'completed'
+        progress.completed_at = timezone.now()
+    
+    progress.save()
+    
+    # Redirecionar para próxima seção ou prova final
+    if progress.status == 'completed':
+        if exercise.section.section_type == 'prova_final':
+            # Verificar se passou na prova (máximo 1 erro)
+            if progress.exercises_correct >= (total_exercises - 1):
+                # APROVADO! Tornar-se Guardião
+                guardian.role = 'guardian'
+                guardian.save()
+                messages.success(request, '🎉 Parabéns! Você foi aprovado e agora é um Guardião!')
+                return redirect('dashboard')
+            else:
+                # REPROVADO
+                progress.status = 'failed'
+                progress.save()
+                messages.error(request, 'Você não atingiu a pontuação necessária. Tente novamente após 24 horas.')
+                return redirect('training_start')
+        else:
+            # Seção concluída, ir para próxima
+            next_section = TrainingSection.objects.filter(
+                is_active=True, 
+                order__gt=exercise.section.order
+            ).order_by('order').first()
+            
+            if next_section:
+                messages.success(request, f'Seção "{exercise.section.title}" concluída!')
+                return redirect('training_section', section_id=next_section.id)
+            else:
+                # Ir para prova final
+                final_section = TrainingSection.objects.filter(
+                    section_type='prova_final', 
+                    is_active=True
+                ).first()
+                if final_section:
+                    messages.success(request, 'Todas as seções concluídas! Agora é hora da prova final.')
+                    return redirect('training_section', section_id=final_section.id)
+                else:
+                    messages.error(request, 'Prova final não encontrada.')
+                    return redirect('training_start')
+    else:
+        # Exercício respondido, continuar na seção
+        messages.success(request, f'Resposta {"correta" if is_correct else "incorreta"}! {exercise.explanation}')
+        return redirect('training_exercise', exercise_id=exercise_id)
 
 
 def reports_list(request):
