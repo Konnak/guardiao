@@ -170,9 +170,10 @@ class VoteSystem {
 // Real-time Updates
 class RealTimeUpdates {
     constructor() {
-        this.lastCheck = null;
-        this.currentSession = null;
-        this.votingTimer = null;
+                this.lastCheck = null;
+                this.currentSession = null;
+                this.votingTimer = null;
+                this.lastNotificationTime = 0; // Para cooldown de notificação
         this.init();
     }
 
@@ -402,9 +403,17 @@ class RealTimeUpdates {
             }
 
             showNotificationPopup(sessionData) {
-                // Criar pop-up de notificação
+                // Verificar cooldown (1 minuto = 60000ms)
+                const now = Date.now();
+                if (now - this.lastNotificationTime < 60000) {
+                    console.log('⏳ Notificação em cooldown, pulando...');
+                    return;
+                }
+                this.lastNotificationTime = now;
+
+                // Criar pop-up de notificação no canto superior direito
                 const notification = document.createElement('div');
-                notification.className = 'notification-popup-overlay';
+                notification.className = 'notification-popup-corner';
                 notification.innerHTML = `
                     <div class="notification-popup">
                         <div class="notification-header">
@@ -447,7 +456,7 @@ class RealTimeUpdates {
             }
 
             dismissNotification() {
-                const notification = document.querySelector('.notification-popup-overlay');
+                const notification = document.querySelector('.notification-popup-corner');
                 if (notification) {
                     notification.remove();
                 }
@@ -456,7 +465,7 @@ class RealTimeUpdates {
 
             enterVotingSession(sessionData) {
                 // Remover pop-up de notificação
-                const notification = document.querySelector('.notification-popup-overlay');
+                const notification = document.querySelector('.notification-popup-corner');
                 if (notification) {
                     notification.remove();
                 }
@@ -492,15 +501,21 @@ class RealTimeUpdates {
                                     <h3>Como você acha que o usuário se comportou?</h3>
                                     <div class="vote-buttons-new">
                                         <button class="vote-btn-new ok-btn-new" data-vote="improcedente">
-                                            <div class="vote-icon">😇</div>
+                                            <div class="vote-icon">
+                                                <div class="loading-spinner"></div>
+                                            </div>
                                             <span>OK</span>
                                         </button>
                                         <button class="vote-btn-new intimidou-btn-new" data-vote="intimidou">
-                                            <div class="vote-icon">😐</div>
+                                            <div class="vote-icon">
+                                                <div class="loading-spinner"></div>
+                                            </div>
                                             <span>Intimidou</span>
                                         </button>
                                         <button class="vote-btn-new grave-btn-new" data-vote="grave">
-                                            <div class="vote-icon">😈</div>
+                                            <div class="vote-icon">
+                                                <div class="loading-spinner"></div>
+                                            </div>
                                             <span>GRAVE</span>
                                         </button>
                                     </div>
@@ -583,7 +598,7 @@ class RealTimeUpdates {
                     case 'improcedente': return '😇';
                     case 'intimidou': return '😐';
                     case 'grave': return '😈';
-                    default: return '';
+                    default: return '<div class="loading-spinner-small"></div>';
                 }
             }
 
@@ -609,9 +624,10 @@ class RealTimeUpdates {
 
             setupVotingEventListeners(sessionData) {
                 // Event listeners para botões de voto
-                document.querySelectorAll('.vote-btn').forEach(btn => {
+                document.querySelectorAll('.vote-btn-new').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const voteType = e.currentTarget.dataset.vote;
+                        console.log('🗳️ Voto clicado:', voteType);
                         await this.castVote(sessionData.session_id, voteType);
                     });
                 });
@@ -667,7 +683,7 @@ class RealTimeUpdates {
                     const voteElement = currentGuardian.querySelector('.guardian-vote');
                     const statusElement = currentGuardian.querySelector('.guardian-status');
                     if (voteElement) {
-                        voteElement.textContent = this.getVoteIcon(voteData.vote_type);
+                        voteElement.innerHTML = this.getVoteIcon(voteData.vote_type);
                     }
                     if (statusElement) {
                         statusElement.textContent = 'Votou';
@@ -736,7 +752,7 @@ class RealTimeUpdates {
                 }
                 
                 // Também remover pop-up de notificação se existir
-                const notification = document.querySelector('.notification-popup-overlay');
+                const notification = document.querySelector('.notification-popup-corner');
                 if (notification) {
                     notification.remove();
                 }
@@ -765,7 +781,7 @@ class RealTimeUpdates {
                 
                 console.warn('⚠️ Token CSRF não encontrado');
                 return '';
-            }
+    }
 }
 
 // Theme System
