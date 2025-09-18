@@ -412,13 +412,20 @@ class RealTimeUpdates {
                console.log('🔍 sessionData.authenticated:', sessionData.authenticated);
                console.log('🔍 sessionData.guardian_id:', sessionData.guardian_id);
                console.log('🔍 Tipo do guardian_id:', typeof sessionData.guardian_id);
+               
+               // CORREÇÃO: Manter guardian_id como string para evitar perda de precisão
+               if (sessionData.guardian_id) {
+                   sessionData.guardian_id = String(sessionData.guardian_id);
+                   console.log('🔧 guardian_id convertido para string:', sessionData.guardian_id);
+               }
                         
                         if (sessionData.authenticated && sessionData.guardian_id) {
                             console.log('✅ ID encontrado na sessão atual:', sessionData.guardian_id);
                             // Limpar localStorage antigo e definir o correto
                             localStorage.removeItem('guardian_discord_id');
                             localStorage.setItem('guardian_discord_id', sessionData.guardian_id);
-                            return parseInt(sessionData.guardian_id);
+                            // CORREÇÃO: Retornar como string para evitar perda de precisão
+                            return sessionData.guardian_id;
                         } else {
                             console.log('❌ Sessão inválida ou guardian_id ausente');
                         }
@@ -429,19 +436,19 @@ class RealTimeUpdates {
                     console.warn('⚠️ Erro ao verificar sessão:', error);
                 }
                 
-                // 3. Verificar se está armazenado no localStorage (fallback)
-                let guardianId = localStorage.getItem('guardian_discord_id');
-                if (guardianId) {
-                    console.log('✅ ID encontrado no localStorage:', guardianId);
-                    return parseInt(guardianId);
-                }
+       // 3. Verificar se está armazenado no localStorage (fallback)
+       let guardianId = localStorage.getItem('guardian_discord_id');
+       if (guardianId) {
+           console.log('✅ ID encontrado no localStorage:', guardianId);
+           return guardianId; // CORREÇÃO: Retornar como string
+       }
                 
                 // 3. Verificar se está em um elemento hidden na página
                 const hiddenInput = document.querySelector('input[name="guardian_discord_id"]');
                 if (hiddenInput && hiddenInput.value) {
                     console.log('✅ ID encontrado no input hidden:', hiddenInput.value);
                     localStorage.setItem('guardian_discord_id', hiddenInput.value);
-                    return parseInt(hiddenInput.value);
+                    return hiddenInput.value; // CORREÇÃO: Retornar como string
                 }
                 
                 // 4. Verificar se está em um data attribute do body
@@ -449,7 +456,7 @@ class RealTimeUpdates {
                 if (bodyGuardianId) {
                     console.log('✅ ID encontrado no data attribute do body:', bodyGuardianId);
                     localStorage.setItem('guardian_discord_id', bodyGuardianId);
-                    return parseInt(bodyGuardianId);
+                    return bodyGuardianId; // CORREÇÃO: Retornar como string
                 }
                 
                 // 5. Tentar obter da URL ou parâmetros
@@ -458,7 +465,7 @@ class RealTimeUpdates {
                 if (urlGuardianId) {
                     console.log('✅ ID encontrado na URL:', urlGuardianId);
                     localStorage.setItem('guardian_discord_id', urlGuardianId);
-                    return parseInt(urlGuardianId);
+                    return urlGuardianId; // CORREÇÃO: Retornar como string
                 }
                 
                 console.warn('❌ ID do Guardião não encontrado em nenhum local. Modal não será exibido.');
