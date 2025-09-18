@@ -605,29 +605,63 @@ def get_pending_report_for_guardian(request, guardian_id):
         if not queue_item:
             return Response({'message': 'Nenhuma denúncia pendente na fila'})
         
-        # Criar nova sessão de votação
-        session = VotingSession.objects.create(
+        # Verificar se já existe sessão ativa para esta denúncia
+        existing_session = VotingSession.objects.filter(
             report=queue_item.report,
-            status='waiting',
-            voting_deadline=timezone.now() + timedelta(minutes=5)
-        )
+            status__in=['waiting', 'voting']
+        ).first()
         
-        # Adicionar Guardião à sessão
-        SessionGuardian.objects.create(
-            session=session,
-            guardian=guardian,
-            is_active=True
-        )
-        
-        # Atualizar status da fila
-        queue_item.status = 'assigned'
-        queue_item.assigned_at = timezone.now()
-        queue_item.save()
-        
-        # Atualizar status da sessão
-        session.status = 'voting'
-        session.started_at = timezone.now()
-        session.save()
+        if existing_session:
+            # Verificar se o guardião já votou nesta denúncia
+            existing_vote = Vote.objects.filter(
+                report=queue_item.report,
+                guardian=guardian
+            ).exists()
+            
+            if existing_vote:
+                return Response({
+                    'error': 'Você já votou nesta denúncia anteriormente',
+                    'message': 'Não é possível participar novamente desta denúncia'
+                })
+            
+            # Adicionar guardião à sessão existente
+            session_guardian, created = SessionGuardian.objects.get_or_create(
+                session=existing_session,
+                guardian=guardian,
+                defaults={'is_active': True}
+            )
+            
+            if not created:
+                return Response({
+                    'error': 'Você já está participando desta sessão',
+                    'message': 'Aguarde sua vez de votar'
+                })
+            
+            session = existing_session
+        else:
+            # Criar nova sessão de votação
+            session = VotingSession.objects.create(
+                report=queue_item.report,
+                status='waiting',
+                voting_deadline=timezone.now() + timedelta(minutes=5)
+            )
+            
+            # Adicionar Guardião à sessão
+            SessionGuardian.objects.create(
+                session=session,
+                guardian=guardian,
+                is_active=True
+            )
+            
+            # Atualizar status da fila
+            queue_item.status = 'assigned'
+            queue_item.assigned_at = timezone.now()
+            queue_item.save()
+            
+            # Atualizar status da sessão
+            session.status = 'voting'
+            session.started_at = timezone.now()
+            session.save()
         
         # Retornar dados da sessão
         session_data = {
@@ -842,12 +876,19 @@ def cast_vote_in_session(request):
         session_guardian.voted_at = timezone.now()
         session_guardian.save()
         
-        # Criar voto no sistema antigo (para compatibilidade)
-        Vote.objects.get_or_create(
+        # Criar voto permanente (sempre criar novo, não usar get_or_create)
+        vote, created = Vote.objects.get_or_create(
             report=session.report,
             guardian=guardian,
             defaults={'vote_type': data['vote_type']}
         )
+        
+        # Se já existe voto, não permitir votar novamente
+        if not created:
+            return Response(
+                {'error': 'Você já votou nesta denúncia anteriormente'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Atualizar contadores da denúncia
         report = session.report
@@ -889,13 +930,25 @@ def cast_vote_in_session(request):
             # Notificar bot para aplicar punição
             # notify_bot_apply_punishment(report) # Desabilitado por enquanto
         
+        # Buscar votos anônimos para mostrar
+        anonymous_votes = []
+        all_votes = Vote.objects.filter(report=session.report).order_by('created_at')
+        for vote in all_votes:
+            anonymous_votes.append({
+                'vote_type': vote.vote_type,
+                'vote_display': vote.get_vote_type_display(),
+                'timestamp': vote.created_at.isoformat()
+            })
+        
         return Response({
             'success': True,
             'message': 'Voto registrado com sucesso',
             'vote_type': data['vote_type'],  # Adicionar vote_type na resposta
             'session_completed': session.status == 'completed',
             'votes_count': voted_guardians.count(),
-            'total_active_guardians': active_guardians.count()
+            'total_active_guardians': active_guardians.count(),
+            'anonymous_votes': anonymous_votes,
+            'total_votes': all_votes.count()
         })
         
     except Exception as e:

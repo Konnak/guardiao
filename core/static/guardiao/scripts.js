@@ -745,6 +745,7 @@ class RealTimeUpdates {
                         // Adicionar vote_type à resposta da API
                         data.vote_type = voteType;
                         this.showVoteConfirmation(data);
+                        this.updateAnonymousVotes(data.anonymous_votes);
                         if (data.session_completed) {
                             this.showFinalDecision(sessionId);
                         }
@@ -787,6 +788,42 @@ class RealTimeUpdates {
                         console.log(`Botão ${index}:`, btn.dataset.vote, btn);
                     });
                 }
+            }
+
+            updateAnonymousVotes(anonymousVotes) {
+                console.log('🔍 Atualizando votos anônimos:', anonymousVotes);
+                
+                // Buscar ou criar seção de votos anônimos
+                let votesSection = document.querySelector('.anonymous-votes-section');
+                if (!votesSection) {
+                    votesSection = document.createElement('div');
+                    votesSection.className = 'anonymous-votes-section';
+                    votesSection.innerHTML = `
+                        <h4>📊 Votos Registrados</h4>
+                        <div class="votes-list"></div>
+                    `;
+                    
+                    const modalContent = document.querySelector('.voting-modal-content');
+                    if (modalContent) {
+                        modalContent.appendChild(votesSection);
+                    }
+                }
+                
+                // Atualizar lista de votos
+                const votesList = votesSection.querySelector('.votes-list');
+                votesList.innerHTML = '';
+                
+                anonymousVotes.forEach((vote, index) => {
+                    const voteElement = document.createElement('div');
+                    voteElement.className = 'vote-item';
+                    voteElement.innerHTML = `
+                        <span class="vote-number">${index + 1}</span>
+                        <span class="vote-type ${vote.vote_type}">${vote.vote_display}</span>
+                        <span class="vote-time">${new Date(vote.timestamp).toLocaleTimeString()}</span>
+                    `;
+                    votesList.appendChild(voteElement);
+                });
+            }
 
                 // Atualizar voto do Guardião atual na lista
                 const currentGuardian = document.querySelector('.current-guardian');

@@ -128,20 +128,8 @@ def dashboard(request):
         request.session.flush()
         return redirect('discord_login')
     
-    # Denúncias pendentes
-    pending_reports = Report.objects.filter(status='pending').order_by('-created_at')[:10]
-    
-    # Denúncias em votação onde o Guardião ainda não votou
-    voting_reports = Report.objects.filter(
-        status='voting'
-    ).exclude(
-        votes__guardian=guardian
-    ).order_by('-created_at')[:10]
-    
     context = {
         'guardian': guardian,
-        'pending_reports': pending_reports,
-        'voting_reports': voting_reports,
     }
     
     return render(request, 'core/dashboard.html', context)
