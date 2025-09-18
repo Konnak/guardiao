@@ -319,6 +319,7 @@ def update_guardian_status(request):
         guardian.status = new_status
         guardian.save()
         print(f"✅ Status alterado de {old_status} para {new_status}")
+        print(f"🔍 Verificando status após save: {guardian.status}")
         
         status_display = 'Em Serviço' if new_status == 'online' else 'Fora de Serviço'
         
@@ -529,7 +530,7 @@ def get_pending_report_for_guardian(request, guardian_id):
                             defaults={
                                 'discord_username': f"User{guardian_id}",
                                 'discord_display_name': f"Usuário {guardian_id}",
-                                'status': 'offline',
+                                'status': 'online',  # Criar como online por padrão
                                 'level': 1,
                                 'points': 0
                             }
@@ -668,8 +669,10 @@ def get_guardian_status(request, guardian_id):
     Endpoint para verificar o status de um Guardião
     """
     try:
+        print(f"🔍 Verificando status do Guardião ID: {guardian_id}")
         try:
             guardian = Guardian.objects.get(discord_id=guardian_id)
+            print(f"✅ Guardião encontrado: {guardian.discord_display_name} (Status: {guardian.status})")
             return Response({
                 'success': True,
                 'guardian': {
@@ -690,7 +693,7 @@ def get_guardian_status(request, guardian_id):
                     discord_id=guardian_id,
                     discord_username="TestUser",
                     discord_display_name="Usuário de Teste",
-                    status='offline',
+                    status='online',  # Criar como online por padrão
                     level=1,
                     points=0
                 )
@@ -719,7 +722,7 @@ def get_guardian_status(request, guardian_id):
                             defaults={
                                 'discord_username': f"User{guardian_id}",
                                 'discord_display_name': f"Usuário {guardian_id}",
-                                'status': 'offline',
+                                'status': 'online',  # Criar como online por padrão
                                 'level': 1,
                                 'points': 0
                             }
