@@ -20,6 +20,9 @@ urlpatterns = [
     # Endpoints para estatísticas
     path('stats/dashboard/', api_views.get_dashboard_stats, name='api_dashboard_stats'),
     
+    # Endpoints para autenticação
+    path('auth/check-session/', api_views.check_session, name='api_check_session'),
+    
     # Endpoints para notificações em tempo real
     path('reports/check-new/', api_views.check_new_reports, name='api_check_new_reports'),
     

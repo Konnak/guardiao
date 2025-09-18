@@ -345,6 +345,36 @@ def get_dashboard_stats(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def check_session(request):
+    """
+    Endpoint para verificar se o usuário está logado
+    """
+    try:
+        # Verificar se há sessão ativa
+        guardian_id = request.session.get('guardian_id')
+        guardian_db_id = request.session.get('guardian_db_id')
+        
+        if guardian_id and guardian_db_id:
+            return Response({
+                'authenticated': True,
+                'guardian_id': guardian_id,
+                'guardian_db_id': guardian_db_id
+            })
+        else:
+            return Response({
+                'authenticated': False,
+                'message': 'Usuário não logado'
+            })
+            
+    except Exception as e:
+        return Response(
+            {'authenticated': False, 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def check_new_reports(request):
     """
     Endpoint para verificar novas denúncias (para notificações em tempo real)

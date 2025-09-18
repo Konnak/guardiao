@@ -177,7 +177,7 @@ class RealTimeUpdates {
         this.init();
     }
 
-    init() {
+            init() {
                 // Check for new reports every 5 seconds
                 if (window.location.pathname.includes('/dashboard') || window.location.pathname === '/') {
                     setInterval(this.checkForUpdates.bind(this), 5000);
@@ -185,8 +185,12 @@ class RealTimeUpdates {
                     this.checkPendingReport();
                     // Verificar denúncias pendentes a cada 1 minuto (60000ms)
                     setInterval(this.checkPendingReport.bind(this), 60000);
-        }
-    }
+                } else {
+                    // Se não estiver no dashboard, fechar qualquer modal/notificação aberta
+                    this.closeVotingModal();
+                    this.dismissNotification();
+                }
+            }
 
     async checkForUpdates() {
         try {
@@ -299,6 +303,27 @@ class RealTimeUpdates {
 
             async checkPendingReport() {
                 try {
+                    // Verificar se o usuário está logado (verificar se há sessão ativa)
+                    const sessionCheck = await fetch('/api/auth/check-session/', {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (!sessionCheck.ok) {
+                        console.log('🚪 Usuário não logado - não verificando denúncias pendentes');
+                        this.closeVotingModal();
+                        this.dismissNotification();
+                        return;
+                    }
+                    
+                    const sessionData = await sessionCheck.json();
+                    if (!sessionData.authenticated) {
+                        console.log('🚪 Sessão inválida - não verificando denúncias pendentes');
+                        this.closeVotingModal();
+                        this.dismissNotification();
+                        return;
+                    }
+
                     // Obter ID do Guardião atual
                     const guardianId = this.getCurrentGuardianId();
                     console.log('🔍 Verificando denúncia pendente para Guardião ID:', guardianId);
