@@ -1721,6 +1721,26 @@ body {
     transform: none;
 }
 
+.vote-btn-new.voted {
+    opacity: 1 !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    animation: pulse-voted 2s infinite;
+}
+
+@keyframes pulse-voted {
+    0% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+}
+
 .vote-icon {
     font-size: 2rem;
     display: flex;

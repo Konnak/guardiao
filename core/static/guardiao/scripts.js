@@ -680,6 +680,15 @@ class RealTimeUpdates {
                     btn.classList.add('disabled');
                 });
 
+                // Destacar o botão que foi votado
+                const votedButton = document.querySelector(`[data-vote="${voteData.vote_type}"]`);
+                if (votedButton) {
+                    votedButton.classList.add('voted');
+                    votedButton.style.opacity = '1';
+                    votedButton.style.transform = 'scale(1.05)';
+                    votedButton.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.3)';
+                }
+
                 // Atualizar voto do Guardião atual na lista
                 const currentGuardian = document.querySelector('.current-guardian');
                 if (currentGuardian) {
