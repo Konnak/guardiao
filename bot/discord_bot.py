@@ -335,6 +335,18 @@ async def report_command(
         # Coletar mensagens recentes do canal (até 100 mensagens)
         recent_messages = bot.message_cache.get_recent_messages(interaction.channel.id, 100)
         
+        # Se não há mensagens no cache, buscar diretamente do canal
+        if not recent_messages:
+            print(f"🔍 Cache vazio para canal {interaction.channel.id}, buscando mensagens diretamente...")
+            try:
+                # Buscar últimas 100 mensagens do canal
+                async for message in interaction.channel.history(limit=100):
+                    recent_messages.append(message)
+                print(f"✅ Coletadas {len(recent_messages)} mensagens diretamente do canal")
+            except Exception as e:
+                print(f"❌ Erro ao buscar mensagens do canal: {e}")
+                recent_messages = []
+        
         # Criar denúncia no banco de dados
         from asgiref.sync import sync_to_async
         
@@ -358,6 +370,7 @@ async def report_command(
         log_report_created(report.id, interaction.user.id, usuario.id, interaction.guild.id)
         
         # Anonimizar e salvar mensagens
+        print(f"🔍 Salvando {len(recent_messages)} mensagens para denúncia #{report.id}")
         user_mapping = {}
         user_counter = 1
         
