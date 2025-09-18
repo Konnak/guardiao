@@ -904,3 +904,96 @@ def test_pending_reports(request):
             {'error': f'Erro ao verificar denúncias pendentes: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_test_session(request):
+    """
+    Endpoint para criar uma sessão de teste para debug
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        data = request.data
+        guardian_id = data.get('guardian_id')
+        
+        if not guardian_id:
+            return Response({'error': 'guardian_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Buscar ou criar Guardião
+        try:
+            guardian = Guardian.objects.get(discord_id=guardian_id)
+        except Guardian.DoesNotExist:
+            guardian = Guardian.objects.create(
+                discord_id=guardian_id,
+                discord_username="TestUser",
+                discord_display_name="Usuário de Teste",
+                status='online',
+                level=1,
+                points=0
+            )
+        
+        # Colocar Guardião online
+        guardian.status = 'online'
+        guardian.save()
+        
+        # Buscar primeira denúncia pendente
+        queue_item = ReportQueue.objects.filter(status='pending').first()
+        
+        if not queue_item:
+            # Criar denúncia de teste
+            from core.models import Report
+            test_report = Report.objects.create(
+                guild_id=123456789,
+                channel_id=987654321,
+                reported_user_id=111111111,
+                reporter_user_id=222222222,
+                reason="Teste de denúncia",
+                status='pending'
+            )
+            
+            queue_item = ReportQueue.objects.create(
+                report=test_report,
+                status='pending',
+                priority=1
+            )
+        
+        # Criar sessão de votação
+        session = VotingSession.objects.create(
+            report=queue_item.report,
+            status='waiting',
+            voting_deadline=timezone.now() + timedelta(minutes=5)
+        )
+        
+        # Adicionar Guardião à sessão
+        SessionGuardian.objects.create(
+            session=session,
+            guardian=guardian,
+            is_active=True
+        )
+        
+        # Atualizar status da fila
+        queue_item.status = 'assigned'
+        queue_item.assigned_at = timezone.now()
+        queue_item.save()
+        
+        # Atualizar status da sessão
+        session.status = 'voting'
+        session.started_at = timezone.now()
+        session.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Sessão de teste criada com sucesso',
+            'session_id': str(session.id),
+            'report_id': session.report.id,
+            'guardian_id': guardian.discord_id
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erro ao criar sessão de teste: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

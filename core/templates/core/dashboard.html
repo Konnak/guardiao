@@ -34,6 +34,14 @@
                 <i class="fas fa-test-tube"></i>
                 Testar Denúncias Pendentes
             </button>
+            <button class="btn btn-warning" onclick="clearLocalStorage()" style="margin-left: 10px;">
+                <i class="fas fa-trash"></i>
+                Limpar Cache
+            </button>
+            <button class="btn btn-info" onclick="createTestSession()" style="margin-left: 10px;">
+                <i class="fas fa-play"></i>
+                Criar Sessão de Teste
+            </button>
         </div>
     </div>
 
@@ -245,21 +253,59 @@ function toggleStatus() {
     });
 }
 
-// Test Pending Reports Function
-function testPendingReports() {
-    fetch('/api/test/pending-reports/')
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(`Teste de Denúncias Pendentes:\n\n${data.message}\n\nTotal de denúncias pendentes: ${data.total_pending_reports}`);
-        } else {
-            alert('Erro ao testar denúncias pendentes: ' + data.error);
+        // Test Pending Reports Function
+        function testPendingReports() {
+            fetch('/api/test/pending-reports/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Teste de Denúncias Pendentes:\n\n${data.message}\n\nTotal de denúncias pendentes: ${data.total_pending_reports}`);
+                } else {
+                    alert('Erro ao testar denúncias pendentes: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao testar denúncias pendentes');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao testar denúncias pendentes');
-    });
-}
+
+        // Clear LocalStorage Function
+        function clearLocalStorage() {
+            localStorage.removeItem('guardian_discord_id');
+            console.log('🗑️ localStorage limpo');
+            alert('Cache limpo! Recarregue a página para atualizar.');
+            location.reload();
+        }
+
+        // Create Test Session Function
+        function createTestSession() {
+            const guardianId = {{ guardian.discord_id }};
+            console.log('🧪 Criando sessão de teste para Guardião:', guardianId);
+            
+            fetch('/api/test/create-session/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                },
+                body: JSON.stringify({
+                    guardian_id: guardianId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Sessão de teste criada!\n\nSession ID: ${data.session_id}\nReport ID: ${data.report_id}\nGuardian ID: ${data.guardian_id}\n\nRecarregue a página para ver o modal.`);
+                    location.reload();
+                } else {
+                    alert('Erro ao criar sessão de teste: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao criar sessão de teste');
+            });
+        }
 </script>
 {% endblock %}

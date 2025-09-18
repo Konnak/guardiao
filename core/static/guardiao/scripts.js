@@ -195,7 +195,7 @@ class RealTimeUpdates {
 
             const response = await fetch(url);
             const data = await response.json();
-
+            
             // Sistema antigo de notificações desabilitado
             // Agora usamos apenas o modal de votação
             console.log('📊 Verificação de atualizações:', data.count, 'novas denúncias');
@@ -347,6 +347,8 @@ class RealTimeUpdates {
             getCurrentGuardianId() {
                 // Tentar obter ID do Guardião de diferentes formas
                 console.log('🔍 Buscando ID do Guardião...');
+                console.log('🔍 window.GUARDIAN_DISCORD_ID:', window.GUARDIAN_DISCORD_ID);
+                console.log('🔍 localStorage guardian_discord_id:', localStorage.getItem('guardian_discord_id'));
                 
                 // 1. Verificar variável global (mais confiável)
                 if (window.GUARDIAN_DISCORD_ID) {
